@@ -74,4 +74,8 @@ class Deployer(object):
 
 
 if __name__ == '__main__':
+    from plasma.root_chain.deployer import Deployer as PlasmaDeployer
+    PlasmaDeployer().create_contract("RootChain/RootChain.sol")
+    
     Deployer().create_contract("ERC721/ERC721.sol")
+    Deployer().create_contract("EIP20/EIP20.sol", args=(100000000 * (10 ** 18), "My ERC20 Token", 18, "MET20"))

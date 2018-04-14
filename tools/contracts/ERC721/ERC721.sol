@@ -1,7 +1,7 @@
 pragma solidity ^0.4.18;
 contract ERC721 {
    string constant private tokenName = "My ERC721 Token";
-   string constant private tokenSymbol = "MET";
+   string constant private tokenSymbol = "MET721";
    uint256 constant private totalTokens = 1000000;
    mapping(address => uint) private balances;
    mapping(uint256 => address) private tokenOwners;
