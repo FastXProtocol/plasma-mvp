@@ -154,6 +154,10 @@ contract ERC721Token is ERC721, ERC721BasicToken {
     allTokensIndex[_tokenId] = allTokens.length;
     allTokens.push(_tokenId);
   }
+  
+  function mint(address _to, uint256 _tokenId) public {
+    _mint(_to, _tokenId);
+  }
 
   /**
    * @dev Internal function to burn a specific token

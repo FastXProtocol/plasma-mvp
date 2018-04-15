@@ -35,7 +35,11 @@ def test():
     process_cmd("deposit {} 100 0 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304".format(tools_config['ERC20_CONTRACT_ADDRESS']))
     print("erc20 balance: ", erc20_contract.balanceOf('0xfd02EcEE62797e75D86BCff1642EB0844afB28c7'))
     
-    
+    erc721_contract.mint('0xfd02EcEE62797e75D86BCff1642EB0844afB28c7', 1, transact={'from': '0xfd02EcEE62797e75D86BCff1642EB0844afB28c7'})
+    erc721_contract.approve(plasma_config['ROOT_CHAIN_CONTRACT_ADDRESS'], 1, transact={'from': '0xfd02EcEE62797e75D86BCff1642EB0844afB28c7'})
+    print("erc721 #1 ownner: ", erc721_contract.ownerOf(1))
+    process_cmd("deposit {} 0 1 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304".format(tools_config['ERC721_CONTRACT_ADDRESS']))
+    print("erc721 #1 ownner: ", erc721_contract.ownerOf(1))
     
 #     process_cmd("send_tx 1 0 0 0 0 0 0xfd02ecee62797e75d86bcff1642eb0844afb28c7 50 0x4b3ec6c9dc67079e82152d6d55d8dd96a8e6aa26 45 5 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304")
 #     process_cmd("submit_block 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304")
