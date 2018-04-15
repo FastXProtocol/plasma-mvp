@@ -64,7 +64,7 @@ class Deployer(object):
 
         # Contract instance in concise mode
         contract_instance = self.w3.eth.contract(abi, contract_address, ContractFactoryClass=ConciseContract)
-        print("Successfully deployed {} contract!".format(contract_name))
+        print("Successfully deployed {} contract at {}!".format(contract_name, contract_address))
         return contract_instance
 
     def get_contract(self, path):
@@ -73,9 +73,13 @@ class Deployer(object):
         return self.w3.eth.contract(abi, plasma_config['ROOT_CHAIN_CONTRACT_ADDRESS'])
 
 
-if __name__ == '__main__':
+def deploy():
     from plasma.root_chain.deployer import Deployer as PlasmaDeployer
-    PlasmaDeployer().create_contract("RootChain/RootChain.sol")
+    plasma_contract = PlasmaDeployer().create_contract("RootChain/RootChain.sol")
     
-    Deployer().create_contract("ERC721/ERC721.sol")
-    Deployer().create_contract("EIP20/EIP20.sol", args=(100000000 * (10 ** 18), "My ERC20 Token", 18, "MET20"))
+    erc20_contract = Deployer().create_contract("ERC721/ERC721Token.sol", args=("My ERC721 Token", "MET721"))
+    erc721_contract = Deployer().create_contract("EIP20/EIP20.sol", args=(100000000 * (10 ** 18), "My ERC20 Token", 18, "MET20"))
+
+
+if __name__ == '__main__':
+    deploy()

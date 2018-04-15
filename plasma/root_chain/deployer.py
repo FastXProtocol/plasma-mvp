@@ -20,6 +20,8 @@ class Deployer(object):
         extra_args = [[file, [os.path.realpath(os.path.join(r, file))]] for r, d, f in os.walk(abs_contract_path) for file in f]
         contracts = {}
         for contract in extra_args:
+            if contract[0].startswith("."):
+                continue
             contracts[contract[0]] = {'urls': contract[1]}
         path = '{}/{}'.format(abs_contract_path, path)
         return path, contracts
