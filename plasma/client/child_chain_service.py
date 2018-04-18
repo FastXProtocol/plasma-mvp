@@ -38,3 +38,6 @@ class ChildChainService(object):
 
     def get_current_block_num(self):
         return self.send_request("get_current_block_num", [])
+
+    def get_balance(self, address, block):
+        return self.send_request("eth_getBalance", [address, block])

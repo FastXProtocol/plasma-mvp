@@ -31,6 +31,7 @@ class ClientParser():
             send_tx=self.send_tx,
             submit_block=self.submit_block,
             withdraw=self.withdraw,
+            get_balance=self.get_balance,
             help=self.help,
         )
 
@@ -41,6 +42,14 @@ class ClientParser():
             print("Please enter a valid command ('or enter help')")
         else:
             return self.client_cmds[command]()
+
+    def get_balance(self):
+        if len(self.inp) != 2:
+            raise Exception("Wrong number of inputs for get_balance")
+        address = self.inp[1]
+
+        balance = self.client.get_balance(address, 'latest')
+        print("%s balance: %d" % (address, balance))
 
     def sync_child_chain(self):
         self.current_block = self.client.get_current_block_num()
