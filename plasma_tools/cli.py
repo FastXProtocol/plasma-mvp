@@ -9,4 +9,4 @@ from plasma import cli
 
 
 if __name__ == '__main__':
-    cli.start_client_cmd()
+    cli.cli()
