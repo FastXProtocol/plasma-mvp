@@ -53,17 +53,19 @@ class ClientParser():
         print("Syncing complete!")
 
     def deposit(self):
-        if len(self.inp) != 3:
+        if len(self.inp) != 5:
             raise Exception("Wrong number of inputs for deposit")
-        amount1 = int(self.inp[1])
-        key = utils.normalize_key(self.inp[2])
+        contractAddress = utils.normalize_address(0 if self.inp[1] == "0" else self.inp[1])
+        amount1 = int(self.inp[2])
+        tokenId = int(self.inp[3])
+        key = utils.normalize_key(self.inp[4])
         newOwner1 = utils.privtoaddr(key)
         newOwner2, amount2 = utils.normalize_address(b'\x00' * 20), 0
         tx = Transaction(0, 0, 0, 0, 0, 0,
                          newOwner1, amount1,
                          newOwner2, amount2,
                          0)
-        self.client.deposit(tx)
+        self.client.deposit(contractAddress, amount1, tokenId, tx)
         print("Succesfully deposited %s to %s" % (amount1, newOwner1))
 
     def send_tx(self):

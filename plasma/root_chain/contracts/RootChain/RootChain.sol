@@ -6,6 +6,8 @@ import 'RLP.sol';
 import 'Merkle.sol';
 import 'Validate.sol';
 import 'PriorityQueue.sol';
+import 'ERC20.sol';
+import 'ERC721Basic.sol';
 
 
 /**
@@ -88,15 +90,37 @@ contract RootChain {
         currentChildBlock = currentChildBlock.add(childBlockInterval);
         currentDepositBlock = 1;
     }
+    
+    function getRoot(address contractAddress, uint256 amount, uint256 tokenId) private returns(bytes32 root){
+        if(contractAddress == address(0)){
+            require(amount == msg.value);
+            require(tokenId == 0);
+            root = keccak256(msg.sender, contractAddress, msg.value, 0);
+        }else if(amount == 0){
+            require(contractAddress != 0);
+            require(tokenId != 0);
+            ERC721Basic erc721Contract = ERC721Basic(contractAddress);
+            require(erc721Contract.ownerOf(tokenId) != address(this));
+            erc721Contract.transferFrom(msg.sender, address(this), tokenId);
+            require(erc721Contract.ownerOf(tokenId) == address(this));
+        }else{
+            require(contractAddress != 0);
+            require(tokenId == 0);
+            ERC20 erc20Contract = ERC20(contractAddress);
+            uint256 originAmount = erc20Contract.balanceOf(address(this));
+            erc20Contract.transferFrom(msg.sender, address(this), amount);
+            require(erc20Contract.balanceOf(address(this)) - originAmount == amount);
+        }
+    }
 
     // @dev Allows anyone to deposit funds into the Plasma chain
     // @param txBytes The format of the transaction that'll become the deposit
-    function deposit()
+    function deposit(address contractAddress, uint256 amount, uint256 tokenId)
         public
         payable
     {
         require(currentDepositBlock < childBlockInterval);
-        bytes32 root = keccak256(msg.sender, msg.value);
+        bytes32 root = getRoot(contractAddress, amount, tokenId);
         uint256 depositBlock = getDepositBlock();
         childChain[depositBlock] = childBlock({
             root: root,
@@ -109,7 +133,7 @@ contract RootChain {
     function startDepositExit(uint256 depositPos, uint256 amount)
         public
     {
-        uint256 blknum = depositPos % 1000000000;
+        uint256 blknum = depositPos / 1000000000;
         // Makes sure that deposit position is actually a deposit
         require(blknum % childBlockInterval != 0);
         bytes32 root = childChain[blknum].root;
@@ -126,14 +150,15 @@ contract RootChain {
     function startExit(uint256 utxoPos, bytes txBytes, bytes proof, bytes sigs)
         public
     {
-        var txList = txBytes.toRLPItem().toList(11);
-        uint256 amount = txList[7 + 2 * oindex].toUint();
+        var txList = txBytes.toRLPItem().toList(11); 
         uint256 blknum = utxoPos / 1000000000;
         uint256 txindex = (utxoPos % 1000000000) / 10000;
-        uint256 oindex = utxoPos - blknum * 1000000000 - txindex * 10000;
-        address exitor = txList[6 + 2 * oindex].toAddress();
+        uint256 oindex = utxoPos - blknum * 1000000000 - txindex * 10000; 
+        uint256 amount = txList[7 + 2 * oindex].toUint();
+        address exitor = txList[6 + 2 * oindex].toAddress(); 
+        
         require(msg.sender == exitor);
-        bytes32 root = childChain[blknum].root;
+        bytes32 root = childChain[blknum].root; 
         bytes32 merkleHash = keccak256(keccak256(txBytes), ByteUtils.slice(sigs, 0, 130));
         require(Validate.checkSigs(keccak256(txBytes), root, txList[0].toUint(), txList[3].toUint(), sigs));
         require(merkleHash.checkMembership(txindex, root, proof));

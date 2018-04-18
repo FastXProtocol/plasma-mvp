@@ -34,8 +34,8 @@ class Client(object):
             transaction.sign1(key2)
         return transaction
 
-    def deposit(self, transaction):
-        self.root_chain.deposit(transact={'from': '0x' + transaction.newowner1.hex(), 'value': transaction.amount1})
+    def deposit(self, contractAddress, amount, tokenId, transaction):
+        self.root_chain.deposit(contractAddress, amount, tokenId, transact={'from': '0x' + transaction.newowner1.hex(), 'value': transaction.amount1})
 
     def apply_transaction(self, transaction):
         self.child_chain.apply_transaction(transaction)

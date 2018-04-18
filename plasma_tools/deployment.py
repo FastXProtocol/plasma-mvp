@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+import os
+import sys
+sys.path.append( os.path.join(os.path.dirname(__file__), '..') )
+
 import json
 import os
 from ethereum.tools import tester as t
@@ -57,10 +64,22 @@ class Deployer(object):
 
         # Contract instance in concise mode
         contract_instance = self.w3.eth.contract(abi, contract_address, ContractFactoryClass=ConciseContract)
-        print("Successfully deployed {} contract!".format(contract_name))
+        print("Successfully deployed {} contract at {}!".format(contract_name, contract_address))
         return contract_instance
 
     def get_contract(self, path):
         file_name = path.split('/')[1]
         abi = json.load(open('contract_data/%s.json' % (file_name.split('.')[0])))
         return self.w3.eth.contract(abi, plasma_config['ROOT_CHAIN_CONTRACT_ADDRESS'])
+
+
+def deploy():
+    from plasma.root_chain.deployer import Deployer as PlasmaDeployer
+    plasma_contract = PlasmaDeployer().create_contract("RootChain/RootChain.sol")
+    
+    erc20_contract = Deployer().create_contract("ERC721/ERC721Token.sol", args=("My ERC721 Token", "MET721"))
+    erc721_contract = Deployer().create_contract("EIP20/EIP20.sol", args=(100000000 * (10 ** 18), "My ERC20 Token", 18, "MET20"))
+
+
+if __name__ == '__main__':
+    deploy()
