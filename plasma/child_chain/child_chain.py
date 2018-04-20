@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import rlp
 from ethereum import utils
 
@@ -5,7 +7,7 @@ from .block import Block
 from .exceptions import (InvalidBlockMerkleException,
                          InvalidBlockSignatureException,
                          InvalidTxSignatureException, TxAlreadySpentException,
-                         TxAmountMismatchException)
+                         TxAmountMismatchException, InvalidTxOutputsException)
 from .transaction import Transaction
 
 
@@ -49,40 +51,47 @@ class ChildChain(object):
 
         self.current_block.transaction_set.append(tx)
 
-#     def validate_tx(self, tx):
-#         inputs = [(tx.blknum1, tx.txindex1, tx.oindex1), (tx.blknum2, tx.txindex2, tx.oindex2)]
-# 
-#         output_amount = tx.amount1 + tx.amount2 + tx.fee
-#         input_amount = 0
-# 
-#         for (blknum, txindex, oindex) in inputs:
-#             # Assume empty inputs and are valid
-#             if blknum == 0:
-#                 continue
-# 
-#             transaction = self.blocks[blknum].transaction_set[txindex]
-# 
-#             if oindex == 0:
-#                 valid_signature = tx.sig1 != b'\x00' * 65 and transaction.newowner1 == tx.sender1
-#                 spent = transaction.spent1
-#                 input_amount += transaction.amount1
-#             else:
-#                 valid_signature = tx.sig2 != b'\x00' * 65 and transaction.newowner2 == tx.sender2
-#                 spent = transaction.spent2
-#                 input_amount += transaction.amount2
-#             if spent:
-#                 raise TxAlreadySpentException('failed to validate tx')
-#             if not valid_signature:
-#                 raise InvalidTxSignatureException('failed to validate tx')
-# 
-#         if input_amount != output_amount:
-#             raise TxAmountMismatchException('failed to validate tx')
+    def validate_outputs(self, contractaddress, amount, tokenid):
+        if contractaddress == utils.normalize_address(0) and \
+            amount == 0 and \
+            tokenid == 0:
+            return True
+
+        if contractaddress == utils.normalize_address(0):
+            if tokenid != 0:
+                raise InvalidTxOutputsException('failed to validate tx')
+        elif amount == 0:
+            if tokenid == 0:
+                raise InvalidTxOutputsException('failed to validate tx')
+        else:
+            if tokenid != 0:
+                raise InvalidTxOutputsException('failed to validate tx')
+        return True
 
     def validate_tx(self, tx):
+        self.validate_outputs(tx.contractaddress1, tx.amount1, tx.tokenid1)
+        self.validate_outputs(tx.contractaddress2, tx.amount2, tx.tokenid2)
+        
+        if tx.tokenid1 != 0 and \
+            tx.tokenid2 != 0 and \
+            tx.tokenid1 == tx.tokenid2 and \
+            tx.contractaddress1 == tx.contractaddress2:
+            raise InvalidTxOutputsException('failed to validate tx')
+        
+        output_amounts = defaultdict(int)
+        output_amounts[tx.contractaddress1] += tx.amount1
+        output_amounts[tx.contractaddress2] += tx.amount2
+        
+        output_nfts = []
+        if tx.tokenid1 != 0:
+            output_nfts.append((tx.contractaddress1, tx.tokenid1))
+        if tx.tokenid2 != 0:
+            output_nfts.append((tx.contractaddress2, tx.tokenid2))
+        
         inputs = [(tx.blknum1, tx.txindex1, tx.oindex1), (tx.blknum2, tx.txindex2, tx.oindex2)]
 
-        output_amount = tx.amount1 + tx.amount2 + tx.fee
-        input_amount = 0
+        input_amounts = defaultdict(int)
+        input_nfts = []
 
         for (blknum, txindex, oindex) in inputs:
             # Assume empty inputs and are valid
@@ -94,17 +103,24 @@ class ChildChain(object):
             if oindex == 0:
                 valid_signature = tx.sig1 != b'\x00' * 65 and transaction.newowner1 == tx.sender1
                 spent = transaction.spent1
-                input_amount += transaction.amount1
+                input_amounts[transaction.contractaddress1] += transaction.amount1
+                if transaction.tokenid1 != 0:
+                    input_nfts.append((transaction.contractaddress1, transaction.tokenid1))
             else:
                 valid_signature = tx.sig2 != b'\x00' * 65 and transaction.newowner2 == tx.sender2
                 spent = transaction.spent2
-                input_amount += transaction.amount2
+                input_amounts[transaction.contractaddress2] += transaction.amount2
+                if transaction.tokenid2 != 0:
+                    input_nfts.append((transaction.contractaddress2, transaction.tokenid2))
             if spent:
                 raise TxAlreadySpentException('failed to validate tx')
             if not valid_signature:
                 raise InvalidTxSignatureException('failed to validate tx')
-
-        if input_amount != output_amount:
+        
+        if sorted(output_amounts.items()) != sorted(input_amounts.items()):
+            raise TxAmountMismatchException('failed to validate tx')
+        
+        if sorted(output_nfts) != sorted(input_nfts):
             raise TxAmountMismatchException('failed to validate tx')
 
     def mark_utxo_spent(self, blknum, txindex, oindex):
