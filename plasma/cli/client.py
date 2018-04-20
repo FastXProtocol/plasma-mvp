@@ -55,40 +55,40 @@ class ClientParser():
     def deposit(self):
         if len(self.inp) != 5:
             raise Exception("Wrong number of inputs for deposit")
-        contractAddress1 = utils.normalize_address(0 if self.inp[1] == "0" else self.inp[1])
+        contractaddress1 = utils.normalize_address(0 if self.inp[1] == "0" else self.inp[1])
         amount1 = int(self.inp[2])
-        tokenId1 = int(self.inp[3])
+        tokenid1 = int(self.inp[3])
         key = utils.normalize_key(self.inp[4])
-        newOwner1 = utils.privtoaddr(key)
-        newOwner2 = utils.normalize_address(b'\x00' * 20)
-        contractAddress2 = utils.normalize_address(b'\x00' * 20)
+        newowner1 = utils.privtoaddr(key)
+        newowner2 = utils.normalize_address(b'\x00' * 20)
+        contractaddress2 = utils.normalize_address(b'\x00' * 20)
         amount2 = 0
-        tokenId2 = 0
+        tokenid2 = 0
         tx = Transaction(0, 0, 0, 0, 0, 0,
-                         newOwner1, contractAddress1, amount1, tokenId1,
-                         newOwner2, contractAddress2, amount2, tokenId2)
-        self.client.deposit(contractAddress1, amount1, tokenId1, tx)
-        print("Succesfully deposited %s to %s" % (amount1, newOwner1))
+                         newowner1, contractaddress1, amount1, tokenid1,
+                         newowner2, contractaddress2, amount2, tokenid2)
+        self.client.deposit(contractaddress1, amount1, tokenid1, tx)
+        print("Succesfully deposited %s to %s" % (amount1, newowner1))
 
     def send_tx(self):
         if len(self.inp) != 17 and len(self.inp) != 16:
             raise Exception("Wrong number of inputs for sending a transaction!")
         blknum1, tx_pos1, utxo_pos1 = int(self.inp[1]), int(self.inp[2]), int(self.inp[3])
         blknum2, tx_pos2, utxo_pos2 = int(self.inp[4]), int(self.inp[5]), int(self.inp[6])
-        newOwner1 = utils.normalize_address(self.inp[7])
-        contractAddress1 = utils.normalize_address(0 if self.inp[8] == "0" else self.inp[8])
+        newowner1 = utils.normalize_address(self.inp[7])
+        contractaddress1 = utils.normalize_address(0 if self.inp[8] == "0" else self.inp[8])
         amount1 = int(self.inp[9])
-        tokenId1 = int(self.inp[10])
-        newOwner2 = utils.normalize_address(self.inp[11])
-        contractAddress2 = utils.normalize_address(0 if self.inp[12] == "0" else self.inp[12])
+        tokenid1 = int(self.inp[10])
+        newowner2 = utils.normalize_address(self.inp[11])
+        contractaddress2 = utils.normalize_address(0 if self.inp[12] == "0" else self.inp[12])
         amount2 = int(self.inp[13])
-        tokenId2 = int(self.inp[14])
+        tokenid2 = int(self.inp[14])
         key1 = utils.normalize_key(self.inp[15])
         key2 = utils.normalize_key(self.inp[16]) if len(self.inp) == 17 else b''
         tx = Transaction(blknum1, tx_pos1, utxo_pos1,
                          blknum2, tx_pos2, utxo_pos2,
-                         newOwner1, contractAddress1, amount1, tokenId1,
-                         newOwner2, contractAddress2, amount2, tokenId2)
+                         newowner1, contractaddress1, amount1, tokenid1,
+                         newowner2, contractaddress2, amount2, tokenid2)
         tx.sign1(key1)
         if key2:
             tx.sign2(key2)
