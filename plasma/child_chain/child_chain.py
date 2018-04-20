@@ -25,10 +25,13 @@ class ChildChain(object):
 
     def apply_deposit(self, event):
         newowner1 = event['args']['depositor']
+        contractaddress1 = event['args']['contractAddress']
         amount1 = event['args']['amount']
+        tokenid1 = event['args']['tokenId']
         blknum1 = event['args']['depositBlock']
         deposit_tx = Transaction(blknum1, 0, 0, 0, 0, 0,
-                                 newowner1, amount1, b'\x00' * 20, 0, 0)
+                                 newowner1, contractaddress1, amount1, tokenid1,
+                                 b'\x00' * 20, 0, 0, 0)
         deposit_block = Block([deposit_tx])
         # Add block validation
         self.blocks[self.current_block_number] = deposit_block
@@ -45,6 +48,35 @@ class ChildChain(object):
         self.mark_utxo_spent(tx.blknum2, tx.txindex2, tx.oindex2)
 
         self.current_block.transaction_set.append(tx)
+
+#     def validate_tx(self, tx):
+#         inputs = [(tx.blknum1, tx.txindex1, tx.oindex1), (tx.blknum2, tx.txindex2, tx.oindex2)]
+# 
+#         output_amount = tx.amount1 + tx.amount2 + tx.fee
+#         input_amount = 0
+# 
+#         for (blknum, txindex, oindex) in inputs:
+#             # Assume empty inputs and are valid
+#             if blknum == 0:
+#                 continue
+# 
+#             transaction = self.blocks[blknum].transaction_set[txindex]
+# 
+#             if oindex == 0:
+#                 valid_signature = tx.sig1 != b'\x00' * 65 and transaction.newowner1 == tx.sender1
+#                 spent = transaction.spent1
+#                 input_amount += transaction.amount1
+#             else:
+#                 valid_signature = tx.sig2 != b'\x00' * 65 and transaction.newowner2 == tx.sender2
+#                 spent = transaction.spent2
+#                 input_amount += transaction.amount2
+#             if spent:
+#                 raise TxAlreadySpentException('failed to validate tx')
+#             if not valid_signature:
+#                 raise InvalidTxSignatureException('failed to validate tx')
+# 
+#         if input_amount != output_amount:
+#             raise TxAmountMismatchException('failed to validate tx')
 
     def validate_tx(self, tx):
         inputs = [(tx.blknum1, tx.txindex1, tx.oindex1), (tx.blknum2, tx.txindex2, tx.oindex2)]

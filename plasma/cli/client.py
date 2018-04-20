@@ -71,22 +71,24 @@ class ClientParser():
         print("Succesfully deposited %s to %s" % (amount1, newOwner1))
 
     def send_tx(self):
-        if len(self.inp) != 14 and len(self.inp) != 13:
+        if len(self.inp) != 17 and len(self.inp) != 16:
             raise Exception("Wrong number of inputs for sending a transaction!")
         blknum1, tx_pos1, utxo_pos1 = int(self.inp[1]), int(self.inp[2]), int(self.inp[3])
         blknum2, tx_pos2, utxo_pos2 = int(self.inp[4]), int(self.inp[5]), int(self.inp[6])
-        newowner1 = utils.normalize_address(self.inp[7])
-        amount1 = int(self.inp[8])
-        newowner2 = utils.normalize_address(self.inp[9])
-        amount2 = int(self.inp[10])
-        fee = int(self.inp[11])
-        key1 = utils.normalize_key(self.inp[12])
-        key2 = utils.normalize_key(self.inp[13]) if len(self.inp) == 14 else b''
+        newOwner1 = utils.normalize_address(self.inp[7])
+        contractAddress1 = utils.normalize_address(0 if self.inp[8] == "0" else self.inp[8])
+        amount1 = int(self.inp[9])
+        tokenId1 = int(self.inp[10])
+        newOwner2 = utils.normalize_address(self.inp[11])
+        contractAddress2 = utils.normalize_address(0 if self.inp[12] == "0" else self.inp[12])
+        amount2 = int(self.inp[13])
+        tokenId2 = int(self.inp[14])
+        key1 = utils.normalize_key(self.inp[15])
+        key2 = utils.normalize_key(self.inp[16]) if len(self.inp) == 17 else b''
         tx = Transaction(blknum1, tx_pos1, utxo_pos1,
                          blknum2, tx_pos2, utxo_pos2,
-                         newowner1, amount1,
-                         newowner2, amount2,
-                         fee)
+                         newOwner1, contractAddress1, amount1, tokenId1,
+                         newOwner2, contractAddress2, amount2, tokenId2)
         tx.sign1(key1)
         if key2:
             tx.sign2(key2)

@@ -25,7 +25,7 @@ contract RootChain {
     /*
      * Events
      */
-    event Deposit(address depositor, uint256 amount, uint256 depositBlock);
+    event Deposit(address depositor, address contractAddress, uint256 amount, uint256 tokenId, uint256 depositBlock);
     event Exit(address exitor, uint256 utxoPos);
 
     /*
@@ -129,7 +129,7 @@ contract RootChain {
             created_at: block.timestamp
         });
         currentDepositBlock = currentDepositBlock.add(1);
-        Deposit(msg.sender, msg.value, depositBlock);
+        Deposit(msg.sender, contractAddress, amount, tokenId, depositBlock);
     }
 
     function startDepositExit(uint256 depositPos, uint256 amount)
