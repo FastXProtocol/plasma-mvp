@@ -55,17 +55,19 @@ class ClientParser():
     def deposit(self):
         if len(self.inp) != 5:
             raise Exception("Wrong number of inputs for deposit")
-        contractAddress = utils.normalize_address(0 if self.inp[1] == "0" else self.inp[1])
+        contractAddress1 = utils.normalize_address(0 if self.inp[1] == "0" else self.inp[1])
         amount1 = int(self.inp[2])
-        tokenId = int(self.inp[3])
+        tokenId1 = int(self.inp[3])
         key = utils.normalize_key(self.inp[4])
         newOwner1 = utils.privtoaddr(key)
-        newOwner2, amount2 = utils.normalize_address(b'\x00' * 20), 0
+        newOwner2 = utils.normalize_address(b'\x00' * 20)
+        contractAddress2 = utils.normalize_address(b'\x00' * 20)
+        amount2 = 0
+        tokenId2 = 0
         tx = Transaction(0, 0, 0, 0, 0, 0,
-                         newOwner1, amount1,
-                         newOwner2, amount2,
-                         0)
-        self.client.deposit(contractAddress, amount1, tokenId, tx)
+                         newOwner1, contractAddress1, amount1, tokenId1,
+                         newOwner2, contractAddress2, amount2, tokenId2)
+        self.client.deposit(contractAddress1, amount1, tokenId1, tx)
         print("Succesfully deposited %s to %s" % (amount1, newOwner1))
 
     def send_tx(self):

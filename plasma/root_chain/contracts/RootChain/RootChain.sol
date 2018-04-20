@@ -103,6 +103,7 @@ contract RootChain {
             require(erc721Contract.ownerOf(tokenId) != address(this));
             erc721Contract.transferFrom(msg.sender, address(this), tokenId);
             require(erc721Contract.ownerOf(tokenId) == address(this));
+            root = keccak256(msg.sender, contractAddress, 0, tokenId);
         }else{
             require(contractAddress != 0);
             require(tokenId == 0);
@@ -110,6 +111,7 @@ contract RootChain {
             uint256 originAmount = erc20Contract.balanceOf(address(this));
             erc20Contract.transferFrom(msg.sender, address(this), amount);
             require(erc20Contract.balanceOf(address(this)) - originAmount == amount);
+            root = keccak256(msg.sender, contractAddress, amount, 0);
         }
     }
 
