@@ -41,9 +41,16 @@ def test():
     process_cmd("deposit {} 0 1 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304".format(tools_config['ERC721_CONTRACT_ADDRESS']))
     print("erc721 #1 ownner: ", erc721_contract.ownerOf(1))
     
-    process_cmd("send_tx 1 0 0 0 0 0 0xfd02ecee62797e75d86bcff1642eb0844afb28c7 0 50 0 0x4b3ec6c9dc67079e82152d6d55d8dd96a8e6aa26 0 50 0 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304")
-    process_cmd("submit_block 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304")
+    process_cmd("sync")
     
+    process_cmd("send_tx 1 0 0 0 0 0 0xfd02ecee62797e75d86bcff1642eb0844afb28c7 0 40 0 0x4b3ec6c9dc67079e82152d6d55d8dd96a8e6aa26 0 60 0 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304")
+    
+    process_cmd("send_tx 2 0 0 0 0 0 0xfd02ecee62797e75d86bcff1642eb0844afb28c7 {ERC20_CONTRACT_ADDRESS} 30 0 0x4b3ec6c9dc67079e82152d6d55d8dd96a8e6aa26 {ERC20_CONTRACT_ADDRESS} 70 0 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304".format(**tools_config))
+    
+    process_cmd("send_tx 3 0 0 0 0 0 0x4b3ec6c9dc67079e82152d6d55d8dd96a8e6aa26 {ERC721_CONTRACT_ADDRESS} 0 1 0 0 0 0 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304".format(**tools_config))
+#     
+#     process_cmd("submit_block 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304")
+#     
 
 
 if __name__ == '__main__':

@@ -37,6 +37,7 @@ class ChildChain(object):
         deposit_block = Block([deposit_tx])
         # Add block validation
         self.blocks[self.current_block_number] = deposit_block
+        print("Deposit Block Number: %s" % self.current_block_number)
         self.current_block_number += 1
 
     def apply_transaction(self, transaction):
@@ -52,6 +53,8 @@ class ChildChain(object):
         self.current_block.transaction_set.append(tx)
 
     def validate_outputs(self, contractaddress, amount, tokenid):
+        if amount < 0 or tokenid < 0:
+            raise InvalidTxOutputsException('failed to validate tx')
         if contractaddress == utils.normalize_address(0) and \
             amount == 0 and \
             tokenid == 0:
@@ -79,8 +82,10 @@ class ChildChain(object):
             raise InvalidTxOutputsException('failed to validate tx')
         
         output_amounts = defaultdict(int)
-        output_amounts[tx.contractaddress1] += tx.amount1
-        output_amounts[tx.contractaddress2] += tx.amount2
+        if tx.amount1 != 0:
+            output_amounts[tx.contractaddress1] += tx.amount1
+        if tx.amount2 != 0:
+            output_amounts[tx.contractaddress2] += tx.amount2
         
         output_nfts = []
         if tx.tokenid1 != 0:
@@ -103,13 +108,15 @@ class ChildChain(object):
             if oindex == 0:
                 valid_signature = tx.sig1 != b'\x00' * 65 and transaction.newowner1 == tx.sender1
                 spent = transaction.spent1
-                input_amounts[transaction.contractaddress1] += transaction.amount1
+                if transaction.amount1 != 0:
+                    input_amounts[transaction.contractaddress1] += transaction.amount1
                 if transaction.tokenid1 != 0:
                     input_nfts.append((transaction.contractaddress1, transaction.tokenid1))
             else:
                 valid_signature = tx.sig2 != b'\x00' * 65 and transaction.newowner2 == tx.sender2
                 spent = transaction.spent2
-                input_amounts[transaction.contractaddress2] += transaction.amount2
+                if transaction.amount1 != 0:
+                    input_amounts[transaction.contractaddress2] += transaction.amount2
                 if transaction.tokenid2 != 0:
                     input_nfts.append((transaction.contractaddress2, transaction.tokenid2))
             if spent:

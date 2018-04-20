@@ -44,6 +44,7 @@ class ClientParser():
 
     def sync_child_chain(self):
         self.current_block = self.client.get_current_block_num()
+        print("Current block: %s" % self.current_block)
         while self.synced_block < self.current_block:
             block_number = self.synced_block
             block = self.client.get_block(self.synced_block)
@@ -79,7 +80,7 @@ class ClientParser():
         contractaddress1 = utils.normalize_address(0 if self.inp[8] == "0" else self.inp[8])
         amount1 = int(self.inp[9])
         tokenid1 = int(self.inp[10])
-        newowner2 = utils.normalize_address(self.inp[11])
+        newowner2 = utils.normalize_address(0 if self.inp[11] == "0" else self.inp[11])
         contractaddress2 = utils.normalize_address(0 if self.inp[12] == "0" else self.inp[12])
         amount2 = int(self.inp[13])
         tokenid2 = int(self.inp[14])
