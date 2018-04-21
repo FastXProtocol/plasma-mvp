@@ -11,8 +11,6 @@ child_chain = ChildChain(plasma_config['AUTHORITY'], root_chain)
 
 @Request.application
 def application(request):
-    print(request.data)    
-
     # Dispatcher is dictionary {<method_name>: callable}
     dispatcher["submit_block"] = lambda block: child_chain.submit_block(block)
     dispatcher["apply_transaction"] = lambda transaction: child_chain.apply_transaction(transaction)
@@ -28,8 +26,10 @@ def application(request):
 
     response = JSONRPCResponseManager.handle(
         request.data, dispatcher)
-    resp = Response(response.json, mimetype='application/json')
-    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp = Response(response.json, mimetype="application/json")
+    resp.headers["Access-Control-Allow-Origin"] = '*'
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type,Content-Length, Authorization, Accept,X-Requested-With"
+    resp.headers["Access-Control-Allow-Methods"] = "PUT,POST,GET,DELETE,OPTIONS"
     return resp
 
 
