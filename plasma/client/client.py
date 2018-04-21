@@ -59,5 +59,8 @@ class Client(object):
     def get_current_block_num(self):
         return self.child_chain.get_current_block_num()
 
-    def get_balance(self, address, blknum):
-        return self.child_chain.get_balance(address, blknum)
+    def get_balance(self, address, block):
+        return self.child_chain.get_balance(address, block)
+
+    def get_utxo(self, address, block):
+        return self.child_chain.get_utxo(address, block)

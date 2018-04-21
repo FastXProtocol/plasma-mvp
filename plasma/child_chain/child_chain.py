@@ -177,7 +177,6 @@ class ChildChain(object):
     def get_balance(self, address, block):
         if block != "latest":
             raise Exception("only support block: latest")
-        curr_block_num = self.get_current_block_num()
 
         output_amounts = defaultdict(int)
         output_nfts = []
@@ -209,4 +208,16 @@ class ChildChain(object):
         else:
             return rlp.encode(self.blocks[self.current_block_number-1]).hex()
             
+    def get_utxo(self, address, block):
+        if block != "latest":
+            raise Exception("only support block: latest")
 
+        utxo = []
+        for block_number, block in self.blocks.items():
+            for tx_index, tx in enumerate(block.transaction_set):
+                # check if utxo belongs to the owner and is not spent
+                if tx.newowner1 == utils.normalize_address(address) and tx.spent1 == False:
+                    utxo.append([block_number, tx_index, 0, utils.decode_addr(tx.contractaddress1), tx.amount1, tx.tokenid1])
+                if tx.newowner2 == utils.normalize_address(address) and tx.spent2 == False:
+                    utxo.append([block_number, tx_index, 1, utils.decode_addr(tx.contractaddress2), tx.amount2, tx.tokenid2])
+        return utxo
