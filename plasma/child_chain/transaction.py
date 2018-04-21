@@ -25,7 +25,8 @@ class Transaction(rlp.Serializable):
         ('sig2', binary),
     ]
 
-    def __init__(self, blknum1, txindex1, oindex1,
+    def __init__(self,
+                 blknum1, txindex1, oindex1,
                  blknum2, txindex2, oindex2,
                  newowner1, contractaddress1, amount1, tokenid1,
                  newowner2, contractaddress2, amount2, tokenid2,

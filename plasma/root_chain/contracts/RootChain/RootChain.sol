@@ -172,8 +172,6 @@ contract RootChain {
         private
     {
         uint256 blknum = utxoPos / 1000000000;
-        uint256 txindex = (utxoPos % 1000000000) / 10000;
-        uint256 oindex = utxoPos - blknum * 1000000000 - txindex * 10000;
         uint256 priority = Math.max(childChain[blknum].created_at, block.timestamp - 1 weeks);
         priority = priority << 128 | utxoPos;
         require(amount > 0);
@@ -220,12 +218,17 @@ contract RootChain {
         uint256 created_at;
         (utxoPos, created_at) = getNextExit();
         exit memory currentExit = exits[utxoPos];
-        while (created_at < twoWeekOldTimestamp && exitsQueue.currentSize() > 0) {
+        while (created_at < twoWeekOldTimestamp) {
             currentExit = exits[utxoPos];
             currentExit.owner.transfer(currentExit.amount);
             exitsQueue.delMin();
             delete exits[utxoPos].owner;
-            (utxoPos, created_at) = getNextExit();
+
+            if (exitsQueue.currentSize() > 0) {
+                (utxoPos, created_at) = getNextExit();
+            } else {
+                return;
+            }
         }
     }
 

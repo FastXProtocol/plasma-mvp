@@ -17,7 +17,8 @@ class ChildChain(object):
         self.root_chain = root_chain
         self.authority = authority
         self.blocks = {}
-        self.current_block_number = 1
+        self.child_block_interval = 1000
+        self.current_block_number = self.child_block_interval
         self.current_block = Block()
         self.pending_transactions = []
 
@@ -26,19 +27,20 @@ class ChildChain(object):
         deposit_filter.watch(self.apply_deposit)
 
     def apply_deposit(self, event):
-        newowner1 = event['args']['depositor']
-        contractaddress1 = event['args']['contractAddress']
-        amount1 = event['args']['amount']
-        tokenid1 = event['args']['tokenId']
-        blknum1 = event['args']['depositBlock']
+        event_args = event['args']
+        newowner1 = event_args['depositor']
+        contractaddress1 = event_args['contractAddress']
+        amount1 = event_args['amount']
+        tokenid1 = event_args['tokenId']
+        blknum1 = event_args['depositBlock']
+
         deposit_tx = Transaction(blknum1, 0, 0, 0, 0, 0,
                                  newowner1, contractaddress1, amount1, tokenid1,
                                  b'\x00' * 20, 0, 0, 0)
         deposit_block = Block([deposit_tx])
-        # Add block validation
-        self.blocks[self.current_block_number] = deposit_block
-        print("Deposit Block Number: %s" % self.current_block_number)
-        self.current_block_number += 1
+
+        self.blocks[blknum1] = deposit_block
+        print("Deposit Block Number: %s" % blknum1)
 
     def apply_transaction(self, transaction):
         tx = rlp.decode(utils.decode_hex(transaction), Transaction)
@@ -141,7 +143,7 @@ class ChildChain(object):
 
     def submit_block(self, block):
         block = rlp.decode(utils.decode_hex(block), Block)
-        if block.merkilize_transaction_set != self.current_block.merkilize_transaction_set:
+        if block.merklize_transaction_set() != self.current_block.merklize_transaction_set():
             raise InvalidBlockMerkleException('input block merkle mismatch with the current block')
 
         valid_signature = block.sig != b'\x00' * 65 and block.sender == self.authority
@@ -151,7 +153,7 @@ class ChildChain(object):
         self.root_chain.transact({'from': '0x' + self.authority.hex()}).submitBlock(block.merkle.root)
         # TODO: iterate through block and validate transactions
         self.blocks[self.current_block_number] = self.current_block
-        self.current_block_number += 1
+        self.current_block_number += self.child_block_interval
         self.current_block = Block()
 
     def get_transaction(self, blknum, txindex):

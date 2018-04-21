@@ -223,12 +223,12 @@ Let's play around a bit:
 
 2. We'll start by depositing:
 ```
-deposit 0 100 0 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304
+deposit 0x0 100 0 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304
 ```
 
 3. Then we'll send a tx:
 ```
-send_tx 1 0 0 0 0 0 0xfd02ecee62797e75d86bcff1642eb0844afb28c7 0 50 0 0x4b3ec6c9dc67079e82152d6d55d8dd96a8e6aa26 0 50 0 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304
+send_tx 1 0 0 0 0 0 0xfd02ecee62797e75d86bcff1642eb0844afb28c7 0x0 50 0 0x4b3ec6c9dc67079e82152d6d55d8dd96a8e6aa26 0x0 50 0 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304
 ```
 
 4.  Next we'll submit the block:
