@@ -1,5 +1,6 @@
 import rlp
 from ethereum import utils
+
 from web3 import HTTPProvider
 from plasma.config import plasma_config
 from plasma.root_chain.deployer import Deployer
@@ -57,3 +58,6 @@ class Client(object):
 
     def get_current_block_num(self):
         return self.child_chain.get_current_block_num()
+
+    def get_balance(self, address, block):
+        return self.child_chain.get_balance(address, block)

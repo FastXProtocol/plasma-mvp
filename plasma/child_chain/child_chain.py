@@ -167,3 +167,47 @@ class ChildChain(object):
 
     def get_current_block_num(self):
         return self.current_block_number
+
+    #
+    # MetaMask Interface
+    #
+    def get_version(self):
+        return "0x100"
+
+    def get_balance(self, address, block):
+        balance = 0
+        newOwner1 = address
+        curr_block_num = self.get_current_block_num()
+
+        for i in range(curr_block_num):
+            block_number = curr_block_num - i - 1
+            print("calc block # %d" % (block_number))
+            try:
+                block = self.get_block(block_number)
+                block = rlp.decode(utils.decode_hex(block), Block)
+                num_tx = len(block.transaction_set)
+                print("# of tx: %s" % (num_tx))
+
+                for i in range(num_tx):
+                    tx = block.transaction_set[i]
+                    print(tx)
+                    attrs = vars(tx)
+                    print (', '.join("%s: %s" % item for item in attrs.items()))
+                    # check if utxo belongs to the owner and is not spent
+                    if tx.newowner1 == utils.normalize_address(newOwner1) and tx.spent1 == False:
+                        balance += tx.amount1
+                    if tx.newowner2 == utils.normalize_address(newOwner1) and tx.spent2 == False:
+                        balance += tx.amount2
+            except KeyError:
+                print('cannot read block #', block_number)
+        print("balance: %d" % (balance))
+        return balance
+
+    def get_block_by_num(self, block, deep):
+        print("get_block_by_num with %s and %s" %(block, deep))
+        if 1 == self.current_block_number:
+            return {}
+        else:
+            return rlp.encode(self.blocks[self.current_block_number-1]).hex()
+            
+

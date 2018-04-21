@@ -11,6 +11,8 @@ child_chain = ChildChain(plasma_config['AUTHORITY'], root_chain)
 
 @Request.application
 def application(request):
+    print(request.data)    
+
     # Dispatcher is dictionary {<method_name>: callable}
     dispatcher["submit_block"] = lambda block: child_chain.submit_block(block)
     dispatcher["apply_transaction"] = lambda transaction: child_chain.apply_transaction(transaction)
@@ -18,6 +20,11 @@ def application(request):
     dispatcher["get_current_block"] = lambda: child_chain.get_current_block()
     dispatcher["get_current_block_num"] = lambda: child_chain.get_current_block_num()
     dispatcher["get_block"] = lambda blknum: child_chain.get_block(blknum)
+    # MetaMask interface
+    dispatcher["eth_getBalance"] = lambda address, block: child_chain.get_balance(address, block)
+    dispatcher["eth_getBlockByNumber"] = lambda block, deep: child_chain.get_block_by_num(block, deep)
+    dispatcher["net_version"] = lambda: child_chain.get_version()
+
     response = JSONRPCResponseManager.handle(
         request.data, dispatcher)
     return Response(response.json, mimetype='application/json')
