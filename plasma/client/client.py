@@ -64,3 +64,6 @@ class Client(object):
 
     def get_utxo(self, address, block):
         return self.child_chain.get_utxo(address, block)
+
+    def get_all_transactions(self):
+        return self.child_chain.get_all_transactions()

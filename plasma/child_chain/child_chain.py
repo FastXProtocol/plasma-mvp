@@ -53,6 +53,7 @@ class ChildChain(object):
         self.mark_utxo_spent(tx.blknum2, tx.txindex2, tx.oindex2)
 
         self.current_block.transaction_set.append(tx)
+        self.blocks[self.current_block_number] = self.current_block
 
     def validate_outputs(self, contractaddress, amount, tokenid):
         if amount < 0 or tokenid < 0:
@@ -61,6 +62,8 @@ class ChildChain(object):
             amount == 0 and \
             tokenid == 0:
             return True
+        if amount == 0 and tokenid == 0:
+            raise InvalidTxOutputsException('failed to validate tx')
 
         if contractaddress == utils.normalize_address(0):
             if tokenid != 0:
@@ -122,11 +125,17 @@ class ChildChain(object):
                 if transaction.tokenid2 != 0:
                     input_nfts.append((transaction.contractaddress2, transaction.tokenid2))
             if spent:
+                print(transaction)
                 raise TxAlreadySpentException('failed to validate tx')
             if not valid_signature:
+                print(transaction)
+                print(transaction.sig1)
+                print(transaction.sig2)
                 raise InvalidTxSignatureException('failed to validate tx')
         
         if sorted(output_amounts.items()) != sorted(input_amounts.items()):
+            print(sorted(output_amounts.items()))
+            print(sorted(input_amounts.items()))
             raise TxAmountMismatchException('failed to validate tx')
         
         if sorted(output_nfts) != sorted(input_nfts):
@@ -221,3 +230,10 @@ class ChildChain(object):
                 if tx.newowner2 == utils.normalize_address(address) and tx.spent2 == False:
                     utxo.append([block_number, tx_index, 1, utils.decode_addr(tx.contractaddress2), tx.amount2, tx.tokenid2])
         return utxo
+
+    def get_all_transactions(self):
+        res = []
+        for block_number, block in self.blocks.items():
+            for tx_index, tx in enumerate(block.transaction_set):
+                res.append([block_number, tx_index, str(tx)])
+        return res

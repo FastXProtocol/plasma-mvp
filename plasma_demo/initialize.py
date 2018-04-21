@@ -27,7 +27,7 @@ def main():
     deploy()
     erc20_contract.approve(plasma_config['ROOT_CHAIN_CONTRACT_ADDRESS'], 1000000000, transact={'from': '0xfd02EcEE62797e75D86BCff1642EB0844afB28c7'})
     process_cmd("deposit {0} 1000000000 0 0xfd02EcEE62797e75D86BCff1642EB0844afB28c7".format(tools_config["ERC20_CONTRACT_ADDRESS"]))
-    process_cmd("submitblock 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304")
+#     process_cmd("submitblock 3bb369fecdc16b93b99514d8ed9c2e87c5824cf4a6a98d2e8e91b7dd0c063304")
     process_cmd("balance 0xfd02EcEE62797e75D86BCff1642EB0844afB28c7 latest")
 
 

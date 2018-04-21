@@ -20,6 +20,7 @@ def application(request):
     dispatcher["get_block"] = lambda blknum: child_chain.get_block(blknum)
     dispatcher["get_balance"] = lambda address, block: child_chain.get_balance(address, block)
     dispatcher["get_utxo"] = lambda address, block: child_chain.get_utxo(address, block)
+    dispatcher["get_all_transactions"] = lambda: child_chain.get_all_transactions()
     # MetaMask interface
     dispatcher["eth_getBalance"] = lambda address, block: child_chain.get_balance(address, block)
     dispatcher["eth_getBlockByNumber"] = lambda block, deep: child_chain.get_block_by_num(block, deep)
