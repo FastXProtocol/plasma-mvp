@@ -175,33 +175,32 @@ class ChildChain(object):
         return "0x100"
 
     def get_balance(self, address, block):
-        balance = 0
-        newOwner1 = address
+        if block != "latest":
+            raise Exception("only support block: latest")
         curr_block_num = self.get_current_block_num()
 
-        for i in range(curr_block_num):
-            block_number = curr_block_num - i - 1
-            print("calc block # %d" % (block_number))
-            try:
-                block = self.get_block(block_number)
-                block = rlp.decode(utils.decode_hex(block), Block)
-                num_tx = len(block.transaction_set)
-                print("# of tx: %s" % (num_tx))
+        output_amounts = defaultdict(int)
+        output_nfts = []
 
-                for i in range(num_tx):
-                    tx = block.transaction_set[i]
-                    print(tx)
-                    attrs = vars(tx)
-                    print (', '.join("%s: %s" % item for item in attrs.items()))
-                    # check if utxo belongs to the owner and is not spent
-                    if tx.newowner1 == utils.normalize_address(newOwner1) and tx.spent1 == False:
-                        balance += tx.amount1
-                    if tx.newowner2 == utils.normalize_address(newOwner1) and tx.spent2 == False:
-                        balance += tx.amount2
-            except KeyError:
-                print('cannot read block #', block_number)
-        print("balance: %d" % (balance))
-        return balance
+        for block_number, block in self.blocks.items():
+            for tx in block.transaction_set:
+                # check if utxo belongs to the owner and is not spent
+                if tx.newowner1 == utils.normalize_address(address) and tx.spent1 == False:
+                    if tx.amount1 != 0:
+                        output_amounts[utils.decode_addr(tx.contractaddress1)] += tx.amount1
+                    if tx.tokenid1 != 0:
+                        output_nfts.append((utils.decode_addr(tx.contractaddress1), tx.tokenid1))
+                if tx.newowner2 == utils.normalize_address(address) and tx.spent2 == False:
+                    if tx.amount2 != 0:
+                        output_amounts[utils.decode_addr(tx.contractaddress2)] += tx.amount2
+                    if tx.tokenid2 != 0:
+                        output_nfts.append((utils.decode_addr(tx.contractaddress2), tx.tokenid2))
+        res = {
+            "FT": sorted(output_amounts.items()),
+            "NFT": sorted(output_nfts),
+        }
+        print("balance: %s" % res)
+        return res
 
     def get_block_by_num(self, block, deep):
         print("get_block_by_num with %s and %s" %(block, deep))

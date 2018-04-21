@@ -88,6 +88,22 @@ class Transaction(rlp.Serializable):
     @property
     def sender2(self):
         return get_sender(self.hash, self.sig2)
+    
+    def __str__(self):
+        res = []
+        for field_name, field_type in self.fields:
+            if field_type == binary:
+                continue
+            field_value = getattr(self, field_name)
+            if field_type == utils.address:
+                field_value = utils.decode_addr(field_value)
+            res.append("%s: %s" % (field_name, field_value))
+        res.append("%s: %s" % ("spent1", self.spent1))
+        res.append("%s: %s" % ("spent2", self.spent2))
+        res = ", ".join(res)
+        res = "Transaction< %s >" % res
+        return res
+    
 
 
 UnsignedTransaction = Transaction.exclude(['sig1', 'sig2'])
