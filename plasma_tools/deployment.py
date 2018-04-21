@@ -151,8 +151,8 @@ def deploy():
     
     deployer = Deployer()
     deployer.compile_all()
-    erc20_contract = deployer.deploy_contract("ERC721Token", args=("My ERC721 Token", "MET721"))
-    erc721_contract = deployer.deploy_contract("EIP20", args=(100000000 * (10 ** 18), "My ERC20 Token", 18, "MET20"))
+    erc721_contract = deployer.deploy_contract("ERC721Token", args=("My ERC721 Token", "MET721"))
+    erc20_contract = deployer.deploy_contract("EIP20", args=(100000000 * (10 ** 18), "GOLD", 18, "GOLD"))
 
 
 if __name__ == '__main__':
