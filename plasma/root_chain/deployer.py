@@ -29,10 +29,9 @@ class Deployer(object):
             'sources': {
                 file_name: {
                     'urls': [os.path.realpath(os.path.join(r, file_name))]
-                } for r, d, f in os.walk(CONTRACTS_DIR) for file_name in f
+                } for r, d, f in os.walk(CONTRACTS_DIR) for file_name in f if not file_name.startswith(".")
             }
         }
-
         return solc_input
 
     def compile_all(self):

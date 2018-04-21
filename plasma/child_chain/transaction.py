@@ -14,10 +14,13 @@ class Transaction(rlp.Serializable):
         ('txindex2', big_endian_int),
         ('oindex2', big_endian_int),
         ('newowner1', utils.address),
+        ('contractaddress1', utils.address),
         ('amount1', big_endian_int),
+        ('tokenid1', big_endian_int),
         ('newowner2', utils.address),
+        ('contractaddress2', utils.address),
         ('amount2', big_endian_int),
-        ('fee', big_endian_int),
+        ('tokenid2', big_endian_int),
         ('sig1', binary),
         ('sig2', binary),
     ]
@@ -25,9 +28,8 @@ class Transaction(rlp.Serializable):
     def __init__(self,
                  blknum1, txindex1, oindex1,
                  blknum2, txindex2, oindex2,
-                 newowner1, amount1,
-                 newowner2, amount2,
-                 fee,
+                 newowner1, contractaddress1, amount1, tokenid1,
+                 newowner2, contractaddress2, amount2, tokenid2,
                  sig1=b'\x00' * 65,
                  sig2=b'\x00' * 65):
         # Input 1
@@ -44,13 +46,14 @@ class Transaction(rlp.Serializable):
 
         # Outputs
         self.newowner1 = utils.normalize_address(newowner1)
+        self.contractaddress1 = utils.normalize_address(contractaddress1)
         self.amount1 = amount1
+        self.tokenid1 = tokenid1
 
         self.newowner2 = utils.normalize_address(newowner2)
+        self.contractaddress2 = utils.normalize_address(contractaddress2)
         self.amount2 = amount2
-
-        # Fee
-        self.fee = fee
+        self.tokenid2 = tokenid2
 
         self.confirmation1 = None
         self.confirmation2 = None
