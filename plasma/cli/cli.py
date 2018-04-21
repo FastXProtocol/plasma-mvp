@@ -140,5 +140,14 @@ def withdrawdeposit(client, owner, blknum, amount):
     print('Submitted withdrawal')
 
 
+@cli.command()
+@click.argument('address', required=True)
+@click.argument('block', required=True)
+@click.pass_obj
+def balance(client, address, block):
+    balance = client.get_balance(address, block)
+    print(balance)
+
+
 if __name__ == '__main__':
     cli()
