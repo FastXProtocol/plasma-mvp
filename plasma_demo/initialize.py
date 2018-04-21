@@ -7,6 +7,7 @@ import json
 import subprocess
 sys.path.append( os.path.join(os.path.dirname(__file__), '..') )
 
+from plasma.config import plasma_config
 from plasma_tools.deployment import deploy
 from plasma_tools.config import tools_config
 from plasma_tools.test import erc20_contract
