@@ -28,7 +28,9 @@ def application(request):
 
     response = JSONRPCResponseManager.handle(
         request.data, dispatcher)
-    return Response(response.json, mimetype='application/json')
+    resp = Response(response.json, mimetype='application/json')
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp
 
 
 if __name__ == '__main__':
