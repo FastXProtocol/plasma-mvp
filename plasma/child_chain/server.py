@@ -31,4 +31,4 @@ def application(request):
 
 
 if __name__ == '__main__':
-    run_simple('localhost', 8546, application)
+    run_simple('0.0.0.0', 8546, application)
