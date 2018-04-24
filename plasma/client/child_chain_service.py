@@ -40,4 +40,10 @@ class ChildChainService(object):
         return self.send_request("get_current_block_num", [])
 
     def get_balance(self, address, block):
-        return self.send_request("eth_getBalance", [address, block])
+        return self.send_request("get_balance", [address, block])
+
+    def get_utxo(self, address, block):
+        return self.send_request("get_utxo", [address, block])
+
+    def get_all_transactions(self):
+        return self.send_request("get_all_transactions", [])

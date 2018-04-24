@@ -149,5 +149,22 @@ def balance(client, address, block):
     print(balance)
 
 
+@cli.command()
+@click.argument('address', required=True)
+@click.argument('block', required=True)
+@click.pass_obj
+def utxo(client, address, block):
+    utxo = client.get_utxo(address, block)
+    print(utxo)
+
+
+@cli.command()
+@click.pass_obj
+def all_transactions(client):
+    all_transactions = client.get_all_transactions()
+    for line in all_transactions:
+        print(line)
+
+
 if __name__ == '__main__':
     cli()

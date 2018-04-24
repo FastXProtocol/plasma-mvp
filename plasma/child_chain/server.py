@@ -11,8 +11,6 @@ child_chain = ChildChain(plasma_config['AUTHORITY'], root_chain)
 
 @Request.application
 def application(request):
-    print(request.data)    
-
     # Dispatcher is dictionary {<method_name>: callable}
     dispatcher["submit_block"] = lambda block: child_chain.submit_block(block)
     dispatcher["apply_transaction"] = lambda transaction: child_chain.apply_transaction(transaction)
@@ -20,6 +18,9 @@ def application(request):
     dispatcher["get_current_block"] = lambda: child_chain.get_current_block()
     dispatcher["get_current_block_num"] = lambda: child_chain.get_current_block_num()
     dispatcher["get_block"] = lambda blknum: child_chain.get_block(blknum)
+    dispatcher["get_balance"] = lambda address, block: child_chain.get_balance(address, block)
+    dispatcher["get_utxo"] = lambda address, block: child_chain.get_utxo(address, block)
+    dispatcher["get_all_transactions"] = lambda: child_chain.get_all_transactions()
     # MetaMask interface
     dispatcher["eth_getBalance"] = lambda address, block: child_chain.get_balance(address, block)
     dispatcher["eth_getBlockByNumber"] = lambda block, deep: child_chain.get_block_by_num(block, deep)
@@ -27,8 +28,12 @@ def application(request):
 
     response = JSONRPCResponseManager.handle(
         request.data, dispatcher)
-    return Response(response.json, mimetype='application/json')
+    resp = Response(response.json, mimetype="application/json")
+    resp.headers["Access-Control-Allow-Origin"] = '*'
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type,Content-Length, Authorization, Accept,X-Requested-With"
+    resp.headers["Access-Control-Allow-Methods"] = "PUT,POST,GET,DELETE,OPTIONS"
+    return resp
 
 
 if __name__ == '__main__':
-    run_simple('localhost', 8546, application)
+    run_simple('0.0.0.0', 8546, application)
