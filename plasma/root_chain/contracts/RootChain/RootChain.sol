@@ -25,7 +25,7 @@ contract RootChain {
     /*
      * Events
      */
-    event Deposit(address depositor, uint256 amount, uint256 depositBlock);
+    event Deposit(address depositor, address contractAddress, uint256 amount, uint256 tokenId, uint256 depositBlock);
     event Exit(address exitor, uint256 utxoPos);
 
     /*
@@ -103,6 +103,7 @@ contract RootChain {
             require(erc721Contract.ownerOf(tokenId) != address(this));
             erc721Contract.transferFrom(msg.sender, address(this), tokenId);
             require(erc721Contract.ownerOf(tokenId) == address(this));
+            root = keccak256(msg.sender, contractAddress, 0, tokenId);
         }else{
             require(contractAddress != 0);
             require(tokenId == 0);
@@ -110,6 +111,7 @@ contract RootChain {
             uint256 originAmount = erc20Contract.balanceOf(address(this));
             erc20Contract.transferFrom(msg.sender, address(this), amount);
             require(erc20Contract.balanceOf(address(this)) - originAmount == amount);
+            root = keccak256(msg.sender, contractAddress, amount, 0);
         }
     }
 
@@ -127,7 +129,7 @@ contract RootChain {
             created_at: block.timestamp
         });
         currentDepositBlock = currentDepositBlock.add(1);
-        Deposit(msg.sender, msg.value, depositBlock);
+        Deposit(msg.sender, contractAddress, amount, tokenId, depositBlock);
     }
 
     function startDepositExit(uint256 depositPos, uint256 amount)
@@ -216,12 +218,17 @@ contract RootChain {
         uint256 created_at;
         (utxoPos, created_at) = getNextExit();
         exit memory currentExit = exits[utxoPos];
-        while (created_at < twoWeekOldTimestamp && exitsQueue.currentSize() > 0) {
+        while (created_at < twoWeekOldTimestamp) {
             currentExit = exits[utxoPos];
             currentExit.owner.transfer(currentExit.amount);
             exitsQueue.delMin();
             delete exits[utxoPos].owner;
-            (utxoPos, created_at) = getNextExit();
+
+            if (exitsQueue.currentSize() > 0) {
+                (utxoPos, created_at) = getNextExit();
+            } else {
+                return;
+            }
         }
     }
 

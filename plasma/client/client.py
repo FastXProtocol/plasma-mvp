@@ -17,14 +17,12 @@ class Client(object):
 
     def create_transaction(self, blknum1=0, txindex1=0, oindex1=0,
                            blknum2=0, txindex2=0, oindex2=0,
-                           newowner1=b'\x00' * 20, amount1=0,
-                           newowner2=b'\x00' * 20, amount2=0,
-                           fee=0):
+                           newowner1=b'\x00' * 20, contractaddress1=b'\x00' * 20, amount1=0, tokenid1=0,
+                           newowner2=b'\x00' * 20, contractaddress2=b'\x00' * 20, amount2=0, tokenid2=0):
         return Transaction(blknum1, txindex1, oindex1,
                            blknum2, txindex2, oindex2,
-                           newowner1, amount1,
-                           newowner2, amount2,
-                           fee)
+                           newowner1, contractaddress1, amount1, tokenid1,
+                           newowner2, contractaddress2, amount2, tokenid2)
 
     def sign_transaction(self, transaction, key1=b'', key2=b''):
         if key1:
@@ -33,12 +31,8 @@ class Client(object):
             transaction.sign1(key2)
         return transaction
 
-    def deposit(self, amount, owner, contractAddress, tokenId):
-        print('amount: %s, owner: %s, contract: %s, tokenId: %s' % (amount, owner, contractAddress, tokenId))
-        self.root_chain.deposit(
-            utils.normalize_address(contractAddress), 
-            amount, tokenId, 
-            transact={'from': owner, 'value': amount})
+    def deposit(self, contractAddress, amount, tokenId, owner):
+        self.root_chain.deposit(contractAddress, amount, tokenId, transact={'from': owner, 'value': amount})
 
     def apply_transaction(self, transaction):
         self.child_chain.apply_transaction(transaction)
@@ -67,3 +61,9 @@ class Client(object):
 
     def get_balance(self, address, block):
         return self.child_chain.get_balance(address, block)
+
+    def get_utxo(self, address, block):
+        return self.child_chain.get_utxo(address, block)
+
+    def get_all_transactions(self):
+        return self.child_chain.get_all_transactions()

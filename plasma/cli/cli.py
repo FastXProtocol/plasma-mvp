@@ -20,13 +20,16 @@ def cli(ctx):
 
 
 @cli.command()
+@click.argument('contractaddress', required=True)
 @click.argument('amount', required=True, type=int)
+@click.argument('tokenid', required=True, type=int)
 @click.argument('address', required=True)
 @click.pass_obj
-def deposit(client, amount, address):
-    # client.deposit(amount, address)
-    client.deposit(amount, address, 0, 0)
-    print("Deposited {0} to {1}".format(amount, address))
+def deposit(client, contractaddress, amount, tokenid, address):
+    if contractaddress == "0x0":
+        contractaddress = NULL_ADDRESS
+    client.deposit(contractaddress, amount, tokenid, address)
+    print("Deposited {0} {1} #{2} to {3}".format(contractaddress, amount, tokenid, address))
 
 
 @cli.command()
@@ -37,31 +40,36 @@ def deposit(client, amount, address):
 @click.argument('txindex2', type=int)
 @click.argument('oindex2', type=int)
 @click.argument('newowner1')
+@click.argument('contractaddress1')
 @click.argument('amount1', type=int)
+@click.argument('tokenid1', type=int)
 @click.argument('newowner2')
+@click.argument('contractaddress2')
 @click.argument('amount2', type=int)
-@click.argument('fee', default=0)
+@click.argument('tokenid2', type=int)
 @click.argument('key1')
 @click.argument('key2', required=False)
 @click.pass_obj
 def sendtx(client,
            blknum1, txindex1, oindex1,
            blknum2, txindex2, oindex2,
-           amount1, newowner1,
-           amount2, newowner2,
-           fee,
+           newowner1, contractaddress1, amount1, tokenid1,
+           newowner2, contractaddress2, amount2, tokenid2,
            key1, key2):
     if newowner1 == "0x0":
         newowner1 = NULL_ADDRESS
     if newowner2 == "0x0":
         newowner2 = NULL_ADDRESS
+    if contractaddress1 == "0x0":
+        contractaddress1 = NULL_ADDRESS
+    if contractaddress2 == "0x0":
+        contractaddress2 = NULL_ADDRESS
 
     # Form a transaction
     tx = Transaction(blknum1, txindex1, oindex1,
                      blknum2, txindex2, oindex2,
-                     utils.normalize_address(newowner1), amount1,
-                     utils.normalize_address(newowner2), amount2,
-                     fee)
+                     utils.normalize_address(newowner1), utils.normalize_address(contractaddress1), amount1, tokenid1,
+                     utils.normalize_address(newowner2), utils.normalize_address(contractaddress2), amount2, tokenid2)
 
     # Sign it
     if key1:
@@ -106,7 +114,7 @@ def withdraw(client,
 
     # Create a Merkle proof
     tx = block.transaction_set[txindex]
-    block.merkilize_transaction_set
+    block.merklize_transaction_set()
     proof = block.merkle.create_membership_proof(tx.merkle_hash)
 
     # Create the confirmation signatures
@@ -137,6 +145,32 @@ def withdrawdeposit(client, owner, blknum, amount):
 def balance(client, address):
     balance = client.get_balance(address, 'latest')
     print("%s balance: %d" % (address, balance))
+
+@cli.command()
+@click.argument('address', required=True)
+@click.argument('block', required=True)
+@click.pass_obj
+def balance(client, address, block):
+    balance = client.get_balance(address, block)
+    print(balance)
+
+
+@cli.command()
+@click.argument('address', required=True)
+@click.argument('block', required=True)
+@click.pass_obj
+def utxo(client, address, block):
+    utxo = client.get_utxo(address, block)
+    print(utxo)
+
+
+@cli.command()
+@click.pass_obj
+def all_transactions(client):
+    all_transactions = client.get_all_transactions()
+    for line in all_transactions:
+        print(line)
+
 
 if __name__ == '__main__':
     cli()

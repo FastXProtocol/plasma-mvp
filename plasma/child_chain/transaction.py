@@ -14,10 +14,13 @@ class Transaction(rlp.Serializable):
         ('txindex2', big_endian_int),
         ('oindex2', big_endian_int),
         ('newowner1', utils.address),
+        ('contractaddress1', utils.address),
         ('amount1', big_endian_int),
+        ('tokenid1', big_endian_int),
         ('newowner2', utils.address),
+        ('contractaddress2', utils.address),
         ('amount2', big_endian_int),
-        ('fee', big_endian_int),
+        ('tokenid2', big_endian_int),
         ('sig1', binary),
         ('sig2', binary),
     ]
@@ -25,9 +28,8 @@ class Transaction(rlp.Serializable):
     def __init__(self,
                  blknum1, txindex1, oindex1,
                  blknum2, txindex2, oindex2,
-                 newowner1, amount1,
-                 newowner2, amount2,
-                 fee,
+                 newowner1, contractaddress1, amount1, tokenid1,
+                 newowner2, contractaddress2, amount2, tokenid2,
                  sig1=b'\x00' * 65,
                  sig2=b'\x00' * 65):
         # Input 1
@@ -44,13 +46,14 @@ class Transaction(rlp.Serializable):
 
         # Outputs
         self.newowner1 = utils.normalize_address(newowner1)
+        self.contractaddress1 = utils.normalize_address(contractaddress1)
         self.amount1 = amount1
+        self.tokenid1 = tokenid1
 
         self.newowner2 = utils.normalize_address(newowner2)
+        self.contractaddress2 = utils.normalize_address(contractaddress2)
         self.amount2 = amount2
-
-        # Fee
-        self.fee = fee
+        self.tokenid2 = tokenid2
 
         self.confirmation1 = None
         self.confirmation2 = None
@@ -85,6 +88,22 @@ class Transaction(rlp.Serializable):
     @property
     def sender2(self):
         return get_sender(self.hash, self.sig2)
+    
+    def __str__(self):
+        res = []
+        for field_name, field_type in self.fields:
+            if field_type == binary:
+                continue
+            field_value = getattr(self, field_name)
+            if field_type == utils.address:
+                field_value = utils.decode_addr(field_value)
+            res.append("%s: %s" % (field_name, field_value))
+        res.append("%s: %s" % ("spent1", self.spent1))
+        res.append("%s: %s" % ("spent2", self.spent2))
+        res = ", ".join(res)
+        res = "Transaction< %s >" % res
+        return res
+    
 
 
 UnsignedTransaction = Transaction.exclude(['sig1', 'sig2'])
