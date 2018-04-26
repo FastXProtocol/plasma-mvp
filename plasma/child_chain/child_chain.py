@@ -54,6 +54,7 @@ class ChildChain(object):
 
         self.current_block.transaction_set.append(tx)
         self.blocks[self.current_block_number] = self.current_block
+        return tx.hash.hex()
 
     def validate_outputs(self, contractaddress, amount, tokenid):
         if amount < 0 or tokenid < 0:
@@ -212,10 +213,10 @@ class ChildChain(object):
 
     def get_block_by_num(self, block, deep):
         print("get_block_by_num with %s and %s" %(block, deep))
-        if 1 == self.current_block_number:
+        try:
+            rlp.encode(self.blocks[self.current_block_number-1]).hex()
+        except KeyError:
             return {}
-        else:
-            return rlp.encode(self.blocks[self.current_block_number-1]).hex()
             
     def get_utxo(self, address, block):
         if block != "latest":
@@ -237,3 +238,7 @@ class ChildChain(object):
             for tx_index, tx in enumerate(block.transaction_set):
                 res.append([block_number, tx_index, str(tx)])
         return res
+
+    def eth_raw_transaction(self, raw_tx):
+        # print(raw_tx[2:])
+        return self.apply_transaction(raw_tx[2:])
