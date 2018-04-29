@@ -25,6 +25,7 @@ def application(request):
     dispatcher["eth_getBalance"] = lambda address, block: child_chain.get_balance(address, block)
     dispatcher["eth_getBlockByNumber"] = lambda block, deep: child_chain.get_block_by_num(block, deep)
     dispatcher["net_version"] = lambda: child_chain.get_version()
+    dispatcher["eth_sendRawTransaction"] = lambda raw_tx: child_chain.eth_raw_transaction(raw_tx)
 
     response = JSONRPCResponseManager.handle(
         request.data, dispatcher)

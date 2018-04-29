@@ -139,6 +139,12 @@ def withdrawdeposit(client, owner, blknum, amount):
     client.withdraw_deposit(owner, deposit_pos, amount)
     print('Submitted withdrawal')
 
+@cli.command()
+@click.argument('address', required=True)
+@click.pass_obj
+def balance(client, address):
+    balance = client.get_balance(address, 'latest')
+    print("%s balance: %d" % (address, balance))
 
 @cli.command()
 @click.argument('address', required=True)
