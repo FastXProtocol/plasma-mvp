@@ -1,7 +1,14 @@
+from time import time as ttime
+from random import randint
+
 import rlp
 from rlp.sedes import big_endian_int, binary
 from ethereum import utils
 from plasma.utils.utils import get_sender, sign
+
+
+DEFAULT_FEE = 0
+DEFAULT_DELAY_MILLISECONDS = 3600 * 1000
 
 
 class Transaction(rlp.Serializable):
@@ -21,6 +28,12 @@ class Transaction(rlp.Serializable):
         ('contractaddress2', utils.address),
         ('amount2', big_endian_int),
         ('tokenid2', big_endian_int),
+        
+        ('fee', big_endian_int),
+        
+        ('expiretimestamp', big_endian_int),
+        ('salt', big_endian_int),
+        
         ('sig1', binary),
         ('sig2', binary),
     ]
@@ -30,8 +43,14 @@ class Transaction(rlp.Serializable):
                  blknum2, txindex2, oindex2,
                  newowner1, contractaddress1, amount1, tokenid1,
                  newowner2, contractaddress2, amount2, tokenid2,
+                 fee=DEFAULT_FEE, expiretimestamp=None, salt=None,
                  sig1=b'\x00' * 65,
                  sig2=b'\x00' * 65):
+        if expiretimestamp is None:
+            expiretimestamp = int(ttime() * 1000) + DEFAULT_DELAY_MILLISECONDS
+        if salt is None:
+            salt = randint(1000000000000, 9999999999999)
+        
         # Input 1
         self.blknum1 = blknum1
         self.txindex1 = txindex1
@@ -54,6 +73,10 @@ class Transaction(rlp.Serializable):
         self.contractaddress2 = utils.normalize_address(contractaddress2)
         self.amount2 = amount2
         self.tokenid2 = tokenid2
+        
+        self.fee = fee
+        self.expiretimestamp = expiretimestamp
+        self.salt = salt
 
         self.confirmation1 = None
         self.confirmation2 = None
