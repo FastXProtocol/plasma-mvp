@@ -137,5 +137,5 @@ class Transaction(rlp.Serializable):
 
 
 UnsignedTransaction0 = Transaction.exclude(['sig1', 'sig2'])
-UnsignedTransaction1 = Transaction.exclude(['sig1', 'sig2', 'blknum2', 'txindex2', 'oindex2', 'newowner1'])
-UnsignedTransaction2 = Transaction.exclude(['sig1', 'sig2', 'blknum1', 'txindex1', 'oindex1', 'newowner2'])
+UnsignedTransaction1 = Transaction.exclude(['sig1', 'sig2', 'blknum2', 'txindex2', 'oindex2', 'newowner2'])
+UnsignedTransaction2 = Transaction.exclude(['sig1', 'sig2', 'blknum1', 'txindex1', 'oindex1', 'newowner1'])
