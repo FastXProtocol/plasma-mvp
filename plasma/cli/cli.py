@@ -64,6 +64,8 @@ def sendtx(client,
         contractaddress1 = NULL_ADDRESS
     if contractaddress2 == "0x0":
         contractaddress2 = NULL_ADDRESS
+    if key2 is None:
+        key2 = key1
 
     # Form a transaction
     tx = Transaction(blknum1, txindex1, oindex1,
@@ -72,10 +74,8 @@ def sendtx(client,
                      utils.normalize_address(newowner2), utils.normalize_address(contractaddress2), amount2, tokenid2)
 
     # Sign it
-    if key1:
-        tx.sign1(utils.normalize_key(key1))
-    if key2:
-        tx.sign2(utils.normalize_key(key2))
+    tx.sign1(utils.normalize_key(key1))
+    tx.sign2(utils.normalize_key(key2))
 
     client.apply_transaction(tx)
     print("Sent transaction")
@@ -139,12 +139,14 @@ def withdrawdeposit(client, owner, blknum, amount):
     client.withdraw_deposit(owner, deposit_pos, amount)
     print('Submitted withdrawal')
 
+
 @cli.command()
 @click.argument('address', required=True)
 @click.pass_obj
 def balance(client, address):
     balance = client.get_balance(address, 'latest')
     print("%s balance: %d" % (address, balance))
+
 
 @cli.command()
 @click.argument('address', required=True)

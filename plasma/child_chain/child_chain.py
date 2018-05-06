@@ -54,7 +54,7 @@ class ChildChain(object):
 
         self.current_block.transaction_set.append(tx)
         self.blocks[self.current_block_number] = self.current_block
-        return tx.hash.hex()
+        return tx.hash0.hex()
 
     def validate_outputs(self, contractaddress, amount, tokenid):
         if amount < 0 or tokenid < 0:
@@ -78,6 +78,9 @@ class ChildChain(object):
         return True
 
     def validate_tx(self, tx):
+        if tx.sig1 == b'\x00' * 65 or tx.sig2 == b'\x00' * 65:
+            raise InvalidTxSignatureException('failed to validate tx')
+        
         self.validate_outputs(tx.contractaddress1, tx.amount1, tx.tokenid1)
         self.validate_outputs(tx.contractaddress2, tx.amount2, tx.tokenid2)
         
@@ -108,7 +111,7 @@ class ChildChain(object):
             # Assume empty inputs and are valid
             if blknum == 0:
                 continue
-
+            
             transaction = self.blocks[blknum].transaction_set[txindex]
 
             if oindex == 0:
@@ -126,17 +129,11 @@ class ChildChain(object):
                 if transaction.tokenid2 != 0:
                     input_nfts.append((transaction.contractaddress2, transaction.tokenid2))
             if spent:
-                print(transaction)
                 raise TxAlreadySpentException('failed to validate tx')
             if not valid_signature:
-                print(transaction)
-                print(transaction.sig1)
-                print(transaction.sig2)
                 raise InvalidTxSignatureException('failed to validate tx')
         
         if sorted(output_amounts.items()) != sorted(input_amounts.items()):
-            print(sorted(output_amounts.items()))
-            print(sorted(input_amounts.items()))
             raise TxAmountMismatchException('failed to validate tx')
         
         if sorted(output_nfts) != sorted(input_nfts):
@@ -160,7 +157,8 @@ class ChildChain(object):
         if not valid_signature:
             raise InvalidBlockSignatureException('failed to submit block')
 
-        self.root_chain.transact({'from': '0x' + self.authority.hex()}).submitBlock(block.merkle.root)
+        print("submit block, min expire timestamp: %s" % (block.min_expire_timestamp, ))
+        self.root_chain.transact({'from': '0x' + self.authority.hex()}).submitBlock(block.merkle.root, block.min_expire_timestamp)
         # TODO: iterate through block and validate transactions
         self.blocks[self.current_block_number] = self.current_block
         self.current_block_number += self.child_block_interval

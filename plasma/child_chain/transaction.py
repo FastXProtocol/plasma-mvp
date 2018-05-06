@@ -1,7 +1,14 @@
+from time import time as ttime
+from random import randint
+
 import rlp
 from rlp.sedes import big_endian_int, binary
 from ethereum import utils
 from plasma.utils.utils import get_sender, sign
+
+
+DEFAULT_FEE = 0
+DEFAULT_DELAY_SECONDS = 3600
 
 
 class Transaction(rlp.Serializable):
@@ -21,6 +28,12 @@ class Transaction(rlp.Serializable):
         ('contractaddress2', utils.address),
         ('amount2', big_endian_int),
         ('tokenid2', big_endian_int),
+        
+        ('fee', big_endian_int),
+        
+        ('expiretimestamp', big_endian_int),
+        ('salt', big_endian_int),
+        
         ('sig1', binary),
         ('sig2', binary),
     ]
@@ -30,8 +43,14 @@ class Transaction(rlp.Serializable):
                  blknum2, txindex2, oindex2,
                  newowner1, contractaddress1, amount1, tokenid1,
                  newowner2, contractaddress2, amount2, tokenid2,
+                 fee=DEFAULT_FEE, expiretimestamp=None, salt=None,
                  sig1=b'\x00' * 65,
                  sig2=b'\x00' * 65):
+        if expiretimestamp is None:
+            expiretimestamp = int(ttime()) + DEFAULT_DELAY_SECONDS
+        if salt is None:
+            salt = randint(1000000000000, 9999999999999)
+        
         # Input 1
         self.blknum1 = blknum1
         self.txindex1 = txindex1
@@ -54,6 +73,10 @@ class Transaction(rlp.Serializable):
         self.contractaddress2 = utils.normalize_address(contractaddress2)
         self.amount2 = amount2
         self.tokenid2 = tokenid2
+        
+        self.fee = fee
+        self.expiretimestamp = expiretimestamp
+        self.salt = salt
 
         self.confirmation1 = None
         self.confirmation2 = None
@@ -62,18 +85,26 @@ class Transaction(rlp.Serializable):
         self.spent2 = False
 
     @property
-    def hash(self):
-        return utils.sha3(rlp.encode(self, UnsignedTransaction))
+    def hash0(self):
+        return utils.sha3(rlp.encode(self, UnsignedTransaction0))
+
+    @property
+    def hash1(self):
+        return utils.sha3(rlp.encode(self, UnsignedTransaction1))
+
+    @property
+    def hash2(self):
+        return utils.sha3(rlp.encode(self, UnsignedTransaction2))
 
     @property
     def merkle_hash(self):
-        return utils.sha3(self.hash + self.sig1 + self.sig2)
+        return utils.sha3(self.hash0 + self.sig1 + self.sig2)
 
     def sign1(self, key):
-        self.sig1 = sign(self.hash, key)
+        self.sig1 = sign(self.hash1, key)
 
     def sign2(self, key):
-        self.sig2 = sign(self.hash, key)
+        self.sig2 = sign(self.hash2, key)
 
     @property
     def is_single_utxo(self):
@@ -83,11 +114,11 @@ class Transaction(rlp.Serializable):
 
     @property
     def sender1(self):
-        return get_sender(self.hash, self.sig1)
+        return get_sender(self.hash1, self.sig1)
 
     @property
     def sender2(self):
-        return get_sender(self.hash, self.sig2)
+        return get_sender(self.hash2, self.sig2)
     
     def __str__(self):
         res = []
@@ -103,7 +134,8 @@ class Transaction(rlp.Serializable):
         res = ", ".join(res)
         res = "Transaction< %s >" % res
         return res
-    
 
 
-UnsignedTransaction = Transaction.exclude(['sig1', 'sig2'])
+UnsignedTransaction0 = Transaction.exclude(['sig1', 'sig2'])
+UnsignedTransaction1 = Transaction.exclude(['sig1', 'sig2', 'blknum2', 'txindex2', 'oindex2', 'newowner2'])
+UnsignedTransaction2 = Transaction.exclude(['sig1', 'sig2', 'blknum1', 'txindex1', 'oindex1', 'newowner1'])

@@ -79,10 +79,11 @@ contract RootChain {
 
     // @dev Allows Plasma chain operator to submit block root
     // @param root The root of a child chain block
-    function submitBlock(bytes32 root)
+    function submitBlock(bytes32 root, uint256 expireTimestamp)
         public
         isAuthority
     {
+        require(expireTimestamp == 0 || block.timestamp < expireTimestamp);
         childChain[currentChildBlock] = childBlock({
             root: root,
             created_at: block.timestamp
