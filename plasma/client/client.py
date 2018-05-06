@@ -4,7 +4,7 @@ from ethereum import utils
 from web3 import HTTPProvider
 from plasma.config import plasma_config
 from plasma.root_chain.deployer import Deployer
-from plasma.child_chain.transaction import Transaction, UnsignedTransaction
+from plasma.child_chain.transaction import Transaction, UnsignedTransaction1, UnsignedTransaction2
 from .child_chain_service import ChildChainService
 
 
@@ -42,7 +42,13 @@ class Client(object):
 
     def withdraw(self, blknum, txindex, oindex, tx, proof, sigs):
         utxo_pos = blknum * 1000000000 + txindex * 10000 + oindex * 1
-        self.root_chain.startExit(utxo_pos, rlp.encode(tx, UnsignedTransaction), proof, sigs, transact={'from': '0x' + tx.newowner1.hex()})
+        self.root_chain.startExit(
+            utxo_pos,
+            rlp.encode(tx, UnsignedTransaction2 if oindex == 0 else UnsignedTransaction1),
+            proof,
+            sigs,
+            transact={'from': '0x' + tx.newowner1.hex()}
+        )
 
     def withdraw_deposit(self, owner, deposit_pos, amount):
         self.root_chain.startDepositExit(deposit_pos, amount, transact={'from': owner})

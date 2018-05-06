@@ -8,7 +8,7 @@ from plasma.utils.utils import get_sender, sign
 
 
 DEFAULT_FEE = 0
-DEFAULT_DELAY_MILLISECONDS = 3600 * 1000
+DEFAULT_DELAY_SECONDS = 3600
 
 
 class Transaction(rlp.Serializable):
@@ -47,7 +47,7 @@ class Transaction(rlp.Serializable):
                  sig1=b'\x00' * 65,
                  sig2=b'\x00' * 65):
         if expiretimestamp is None:
-            expiretimestamp = int(ttime() * 1000) + DEFAULT_DELAY_MILLISECONDS
+            expiretimestamp = int(ttime()) + DEFAULT_DELAY_SECONDS
         if salt is None:
             salt = randint(1000000000000, 9999999999999)
         
@@ -85,18 +85,26 @@ class Transaction(rlp.Serializable):
         self.spent2 = False
 
     @property
-    def hash(self):
-        return utils.sha3(rlp.encode(self, UnsignedTransaction))
+    def hash0(self):
+        return utils.sha3(rlp.encode(self, UnsignedTransaction0))
+
+    @property
+    def hash1(self):
+        return utils.sha3(rlp.encode(self, UnsignedTransaction1))
+
+    @property
+    def hash2(self):
+        return utils.sha3(rlp.encode(self, UnsignedTransaction2))
 
     @property
     def merkle_hash(self):
-        return utils.sha3(self.hash + self.sig1 + self.sig2)
+        return utils.sha3(self.hash0 + self.sig1 + self.sig2)
 
     def sign1(self, key):
-        self.sig1 = sign(self.hash, key)
+        self.sig1 = sign(self.hash1, key)
 
     def sign2(self, key):
-        self.sig2 = sign(self.hash, key)
+        self.sig2 = sign(self.hash2, key)
 
     @property
     def is_single_utxo(self):
@@ -106,11 +114,11 @@ class Transaction(rlp.Serializable):
 
     @property
     def sender1(self):
-        return get_sender(self.hash, self.sig1)
+        return get_sender(self.hash1, self.sig1)
 
     @property
     def sender2(self):
-        return get_sender(self.hash, self.sig2)
+        return get_sender(self.hash2, self.sig2)
     
     def __str__(self):
         res = []
@@ -126,7 +134,8 @@ class Transaction(rlp.Serializable):
         res = ", ".join(res)
         res = "Transaction< %s >" % res
         return res
-    
 
 
-UnsignedTransaction = Transaction.exclude(['sig1', 'sig2'])
+UnsignedTransaction0 = Transaction.exclude(['sig1', 'sig2'])
+UnsignedTransaction1 = Transaction.exclude(['sig1', 'sig2', 'blknum1', 'txindex1', 'oindex1', 'newowner2'])
+UnsignedTransaction2 = Transaction.exclude(['sig1', 'sig2', 'blknum2', 'txindex2', 'oindex2', 'newowner1'])
