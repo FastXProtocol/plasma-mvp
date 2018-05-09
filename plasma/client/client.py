@@ -10,7 +10,7 @@ from .child_chain_service import ChildChainService
 
 class Client(object):
 
-    def __init__(self, root_chain_provider=HTTPProvider('http://localhost:8545'), child_chain_url="http://localhost:8546/jsonrpc"):
+    def __init__(self, root_chain_provider=HTTPProvider(plasma_config['NETWORK']), child_chain_url="http://localhost:8546/jsonrpc"):
         deployer = Deployer(root_chain_provider)
         self.root_chain = deployer.get_contract_at_address("RootChain", plasma_config['ROOT_CHAIN_CONTRACT_ADDRESS'], concise=True)
         self.child_chain = ChildChainService(child_chain_url)

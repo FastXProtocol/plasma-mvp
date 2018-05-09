@@ -1,5 +1,7 @@
 plasma_config = dict(
-    ROOT_CHAIN_CONTRACT_ADDRESS="0xa3b2a1804203b75b494028966c0f62e677447a39",
-    AUTHORITY=b'\xfd\x02\xec\xeeby~u\xd8k\xcf\xf1d.\xb0\x84J\xfb(\xc7',
+    ROOT_CHAIN_CONTRACT_ADDRESS="0xDE4E92eF1527B06ceb53694a6C1db4B4Aa62BB9d",
+    AUTHORITY=b'\xfc2\xe7\xc7\xc5S\x91\xeb\xb4\xf9\x11\x87\xc9\x14\x18\xbf\x96\x86\x0c\xa9',
     AUTHORITY_KEY=b';\xb3i\xfe\xcd\xc1k\x93\xb9\x95\x14\xd8\xed\x9c.\x87\xc5\x82L\xf4\xa6\xa9\x8d.\x8e\x91\xb7\xdd\x0c\x063\x04',
+    NETWORK="http://localhost:8545",
+    COINBASE="0xfc32e7c7c55391ebb4f91187c91418bf96860ca9",
 )
