@@ -3,12 +3,15 @@
 
 import os
 import sys
+import shutil
 sys.path.append( os.path.join(os.path.dirname(__file__), '..') )
 
 import json
 from solc import compile_standard
 from web3.contract import ConciseContract, Contract
 from web3 import Web3, HTTPProvider
+
+from plasma.child_chain.child_chain import PICKLE_DIR
 
 OWN_DIR = os.path.dirname(os.path.realpath(__file__))
 CONTRACTS_DIR = OWN_DIR + '/contracts'
@@ -144,6 +147,9 @@ class Deployer(object):
 
 
 def deploy():
+    print("deleting child chain pickle")
+    shutil.rmtree(PICKLE_DIR, ignore_errors=True)
+    
     from plasma.root_chain.deployer import Deployer as PlasmaDeployer
     plasma_deployer = PlasmaDeployer()
     plasma_deployer.compile_all()
