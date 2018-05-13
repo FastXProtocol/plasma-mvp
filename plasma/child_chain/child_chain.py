@@ -1,3 +1,5 @@
+import os
+import pickle
 from collections import defaultdict
 
 import rlp
@@ -10,10 +12,12 @@ from .exceptions import (InvalidBlockMerkleException,
                          TxAmountMismatchException, InvalidTxOutputsException)
 from .transaction import Transaction
 
+PICKLE_DIR = "child_chain_pickle"
+
 
 class ChildChain(object):
 
-    def __init__(self, authority, root_chain):
+    def __init__(self, authority, root_chain, load=True):
         self.root_chain = root_chain
         self.authority = authority
         self.blocks = {}
@@ -22,9 +26,37 @@ class ChildChain(object):
         self.current_block = Block()
         self.pending_transactions = []
 
+        if load:
+            self.load()
+
         # Register for deposit event listener
         deposit_filter = self.root_chain.on('Deposit')
         deposit_filter.watch(self.apply_deposit)
+    
+    @property
+    def save_field_names(self):
+        return ["blocks", "current_block_number", "current_block", "pending_transactions"]
+    
+    def save(self):
+        print('saving child chain...')
+        if not os.path.exists(PICKLE_DIR):
+            os.mkdir(PICKLE_DIR)
+        for field_name in self.save_field_names:
+            print('saving %s...' % field_name)
+            with open(os.path.join(PICKLE_DIR, field_name + ".pickle"), "wb") as f:
+                pickle.dump(getattr(self, field_name), f, pickle.HIGHEST_PROTOCOL)
+        print('child chain saved')
+    
+    def load(self):
+        if os.path.exists(PICKLE_DIR):
+            for field_name in self.save_field_names:
+                print('loading %s...' % field_name)
+                try:
+                    with open(os.path.join(PICKLE_DIR, field_name + ".pickle"), 'rb') as f:
+                        setattr(self, field_name, pickle.load(f))
+                except Exception as e:
+                    print("load %s failed: %s" % (field_name, str(e)))
+    
 
     def apply_deposit(self, event):
         event_args = event['args']
@@ -41,6 +73,8 @@ class ChildChain(object):
 
         self.blocks[blknum1] = deposit_block
         print("Deposit Block Number: %s" % blknum1)
+        
+        self.save()
 
     def apply_transaction(self, transaction):
         tx = rlp.decode(utils.decode_hex(transaction), Transaction)
@@ -54,6 +88,9 @@ class ChildChain(object):
 
         self.current_block.transaction_set.append(tx)
         self.blocks[self.current_block_number] = self.current_block
+        
+        self.save()
+        
         return tx.hash0.hex()
 
     def validate_outputs(self, contractaddress, amount, tokenid):
@@ -163,6 +200,8 @@ class ChildChain(object):
         self.blocks[self.current_block_number] = self.current_block
         self.current_block_number += self.child_block_interval
         self.current_block = Block()
+        
+        self.save()
 
     def get_transaction(self, blknum, txindex):
         return rlp.encode(self.blocks[blknum].transaction_set[txindex]).hex()
