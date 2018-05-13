@@ -147,6 +147,7 @@ class Deployer(object):
 
 
 def deploy():
+    print("deleting child chain pickle")
     shutil.rmtree(PICKLE_DIR, ignore_errors=True)
     
     from plasma.root_chain.deployer import Deployer as PlasmaDeployer
