@@ -34,43 +34,6 @@ export const client = {
         let txEncoded = rlp.encode(txRaw);
         return web3.utils.sha3(txEncoded);
     },
-    createTransaction: (blk, txindex, oindex, contract, amountSend, amount, owner1, owner2) => {
-        let blk_num = blk;
-        let tx_index = txindex;
-        let o_index = oindex;
-        let amSend = amountSend;
-        let amRemain = amount - amountSend;
-    
-        if (amSend <= 0) {
-          throw new Error();
-        }
-        if (amRemain < 0) {
-          throw new Error();
-        }
-    
-        let newowner1, newowner2;
-    
-        if (!owner1) {
-          throw new Error();
-        } else {
-          newowner1 = client.normalizeAddress(owner1);
-        }
-        if (amSend > 0 && amRemain > 0 && !owner2 ) {
-          // there's some change, but no owner2 is specified
-          throw new Error();
-        } else if (amRemain > 0) {
-          newowner2 = client.normalizeAddress(owner2);
-        } else {
-            owner2 = 0;
-            newowner2 = client.normalizeAddress('0x0');
-        }
-    
-        let token_contract = new Buffer(contract, 'hex');
-    
-        return [blk_num, tx_index, o_index, 0, 0, 0,
-          newowner1, token_contract, amSend, 0, 
-          newowner2, owner2 ? token_contract:client.normalizeAddress('0x0'), amRemain, 0];
-    },
     sendDeposit: (contractAddress, amount, tokenid, owner) => {
         console.log("deposit contractAddress: " + contractAddress +
             ", amount: " + amount +
@@ -84,20 +47,68 @@ export const client = {
     getUTXO: (address, block="latest") => {
         return client.makeChildChainRpcRequest("get_utxo", [address, block]);
     },
-    sendTransaction: (blk, txindex, oindex, contract, amountSend, amount, owner1, owner2) => {
-        let txRaw = client.createTransaction(blk, txindex, oindex, contract, amountSend, amount, owner1, owner2);
-        let txHash = client.hashTransaction(txRaw);
-
-        web3.eth.sign(txHash, owner2).then(keySigned => {
-            keySigned = keySigned.substr(2);
-            console.log(keySigned);
-            let keySignedBytes = new Buffer(keySigned, 'hex');
-
-            let txRawWithKeys = txRaw.concat([keySignedBytes, keySignedBytes]);
-            var txEncoded = rlp.encode(txRawWithKeys);
+    sendTransaction: (blknum1, txindex1, oindex1,
+           blknum2, txindex2, oindex2,
+           newowner1, contractaddress1, amount1, tokenid1,
+           newowner2, contractaddress2, amount2, tokenid2,
+           fee=0, expiretimestamp=null, salt=null,
+           sign1=null, sign2=null, address1=null, address2=null) => {
+        if (sign1 == null && address1 == null){
+            throw new Error("sign1 and address1 can not both be none");
+        }
+        if (sign2 == null && address2 == null){
+            throw new Error("sign2 and address2 can not both be none");
+        }
+        if (expiretimestamp == null){
+            expiretimestamp = Math.ceil(Date.now() / 1000) + 3600;
+        }
+        if (salt == null) {
+            salt = Math.floor(Math.random() * 1000000000000);
+        }
+        contractaddress1 = client.normalizeAddress(contractaddress1);
+        newowner1 = client.normalizeAddress(newowner1);
+        contractaddress2 = client.normalizeAddress(contractaddress2);
+        newowner2 = client.normalizeAddress(newowner2);
+        
+        let txRaw = [blknum1, txindex1, oindex1,
+           blknum2, txindex2, oindex2,
+           newowner1, contractaddress1, amount1, tokenid1,
+           newowner2, contractaddress2, amount2, tokenid2,
+           fee, expiretimestamp, salt];
+        
+        let afterSign2 = (sign1, sign2) => {
+            sign1 = sign1.substr(2);
+            sign2 = sign2.substr(2);
+            console.log(sign1, sign2);
+            let txRawWithKeys = txRaw.concat([new Buffer(sign1, 'hex'), new Buffer(sign2, 'hex')]);
+            let txEncoded = rlp.encode(txRawWithKeys);
             console.log("sending transaction ...");
             return client.makeChildChainRpcRequest("apply_transaction", [txEncoded.toString('hex')]);
-        });
+        }
+        
+        let afterSign1 = (sign1) => {
+            if (sign2 == null) {
+                let hash2 = client.hashTransaction([blknum2, txindex2, oindex2,
+                   contractaddress1, amount1, tokenid1,
+                   newowner2, contractaddress2, amount2, tokenid2,
+                   fee, expiretimestamp, salt]);
+                web3.eth.sign(hash2, address2).then((sign2) => {
+                    afterSign2(sign1, sign2);
+                });
+            } else {
+                afterSign2(sign1, sign2);
+            }
+        }
+        
+        if (sign1 == null){
+            let hash1 = client.hashTransaction([blknum1, txindex1, oindex1,
+               newowner1, contractaddress1, amount1, tokenid1,
+               contractaddress2, amount2, tokenid2,
+               fee, expiretimestamp, salt]);
+            web3.eth.sign(hash1, address1).then(afterSign1);
+        } else {
+            afterSign1(sign1);
+        }
     }
 }
 

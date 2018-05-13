@@ -54,42 +54,6 @@ var client = exports.client = {
         var txEncoded = _rlp2.default.encode(txRaw);
         return web3.utils.sha3(txEncoded);
     },
-    createTransaction: function createTransaction(blk, txindex, oindex, contract, amountSend, amount, owner1, owner2) {
-        var blk_num = blk;
-        var tx_index = txindex;
-        var o_index = oindex;
-        var amSend = amountSend;
-        var amRemain = amount - amountSend;
-
-        if (amSend <= 0) {
-            throw new Error();
-        }
-        if (amRemain < 0) {
-            throw new Error();
-        }
-
-        var newowner1 = void 0,
-            newowner2 = void 0;
-
-        if (!owner1) {
-            throw new Error();
-        } else {
-            newowner1 = client.normalizeAddress(owner1);
-        }
-        if (amSend > 0 && amRemain > 0 && !owner2) {
-            // there's some change, but no owner2 is specified
-            throw new Error();
-        } else if (amRemain > 0) {
-            newowner2 = client.normalizeAddress(owner2);
-        } else {
-            owner2 = 0;
-            newowner2 = client.normalizeAddress('0x0');
-        }
-
-        var token_contract = new Buffer(contract, 'hex');
-
-        return [blk_num, tx_index, o_index, 0, 0, 0, newowner1, token_contract, amSend, 0, newowner2, owner2 ? token_contract : client.normalizeAddress('0x0'), amRemain, 0];
-    },
     sendDeposit: function sendDeposit(contractAddress, amount, tokenid, owner) {
         console.log("deposit contractAddress: " + contractAddress + ", amount: " + amount + ", tokenid: " + tokenid + ", owner: " + owner);
         return rootChain.methods.deposit(contractAddress, amount, tokenid).send({ from: owner, value: amount });
@@ -104,20 +68,61 @@ var client = exports.client = {
 
         return client.makeChildChainRpcRequest("get_utxo", [address, block]);
     },
-    sendTransaction: function sendTransaction(blk, txindex, oindex, contract, amountSend, amount, owner1, owner2) {
-        var txRaw = client.createTransaction(blk, txindex, oindex, contract, amountSend, amount, owner1, owner2);
-        var txHash = client.hashTransaction(txRaw);
+    sendTransaction: function sendTransaction(blknum1, txindex1, oindex1, blknum2, txindex2, oindex2, newowner1, contractaddress1, amount1, tokenid1, newowner2, contractaddress2, amount2, tokenid2) {
+        var fee = arguments.length > 14 && arguments[14] !== undefined ? arguments[14] : 0;
+        var expiretimestamp = arguments.length > 15 && arguments[15] !== undefined ? arguments[15] : null;
+        var salt = arguments.length > 16 && arguments[16] !== undefined ? arguments[16] : null;
+        var sign1 = arguments.length > 17 && arguments[17] !== undefined ? arguments[17] : null;
+        var sign2 = arguments.length > 18 && arguments[18] !== undefined ? arguments[18] : null;
+        var address1 = arguments.length > 19 && arguments[19] !== undefined ? arguments[19] : null;
+        var address2 = arguments.length > 20 && arguments[20] !== undefined ? arguments[20] : null;
 
-        web3.eth.sign(txHash, owner2).then(function (keySigned) {
-            keySigned = keySigned.substr(2);
-            console.log(keySigned);
-            var keySignedBytes = new Buffer(keySigned, 'hex');
+        if (sign1 == null && address1 == null) {
+            throw new Error("sign1 and address1 can not both be none");
+        }
+        if (sign2 == null && address2 == null) {
+            throw new Error("sign2 and address2 can not both be none");
+        }
+        if (expiretimestamp == null) {
+            expiretimestamp = Math.ceil(Date.now() / 1000) + 3600;
+        }
+        if (salt == null) {
+            salt = Math.floor(Math.random() * 1000000000000);
+        }
+        contractaddress1 = client.normalizeAddress(contractaddress1);
+        newowner1 = client.normalizeAddress(newowner1);
+        contractaddress2 = client.normalizeAddress(contractaddress2);
+        newowner2 = client.normalizeAddress(newowner2);
 
-            var txRawWithKeys = txRaw.concat([keySignedBytes, keySignedBytes]);
+        var txRaw = [blknum1, txindex1, oindex1, blknum2, txindex2, oindex2, newowner1, contractaddress1, amount1, tokenid1, newowner2, contractaddress2, amount2, tokenid2, fee, expiretimestamp, salt];
+
+        var afterSign2 = function afterSign2(sign1, sign2) {
+            sign1 = sign1.substr(2);
+            sign2 = sign2.substr(2);
+            console.log(sign1, sign2);
+            var txRawWithKeys = txRaw.concat([new Buffer(sign1, 'hex'), new Buffer(sign2, 'hex')]);
             var txEncoded = _rlp2.default.encode(txRawWithKeys);
             console.log("sending transaction ...");
             return client.makeChildChainRpcRequest("apply_transaction", [txEncoded.toString('hex')]);
-        });
+        };
+
+        var afterSign1 = function afterSign1(sign1) {
+            if (sign2 == null) {
+                var hash2 = client.hashTransaction([blknum2, txindex2, oindex2, contractaddress1, amount1, tokenid1, newowner2, contractaddress2, amount2, tokenid2, fee, expiretimestamp, salt]);
+                web3.eth.sign(hash2, address2).then(function (sign2) {
+                    afterSign2(sign1, sign2);
+                });
+            } else {
+                afterSign2(sign1, sign2);
+            }
+        };
+
+        if (sign1 == null) {
+            var hash1 = client.hashTransaction([blknum1, txindex1, oindex1, newowner1, contractaddress1, amount1, tokenid1, contractaddress2, amount2, tokenid2, fee, expiretimestamp, salt]);
+            web3.eth.sign(hash1, address1).then(afterSign1);
+        } else {
+            afterSign1(sign1);
+        }
     }
 };
 
