@@ -15,3 +15,8 @@ contract_data/
 
 *.pyc
 build/
+
+node_modules/
+child_chain_pickle/
+
+.env
