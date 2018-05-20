@@ -83,12 +83,12 @@ var client = {
         var address1 = arguments.length > 19 && arguments[19] !== undefined ? arguments[19] : null;
         var address2 = arguments.length > 20 && arguments[20] !== undefined ? arguments[20] : null;
 
-        if (sign1 == null && address1 == null) {
-            throw new Error("sign1 and address1 can not both be none");
-        }
-        if (sign2 == null && address2 == null) {
-            throw new Error("sign2 and address2 can not both be none");
-        }
+        //         if (sign1 == null && address1 == null){
+        //             throw new Error("sign1 and address1 can not both be none");
+        //         }
+        //         if (sign2 == null && address2 == null){
+        //             throw new Error("sign2 and address2 can not both be none");
+        //         }
         if (expiretimestamp == null) {
             expiretimestamp = Math.ceil(Date.now() / 1000) + 3600;
         }
