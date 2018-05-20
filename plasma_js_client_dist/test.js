@@ -70,7 +70,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
                     _context.t4.log.call(_context.t4, _context.t5);
 
-                    process.exit();
+                    setTimeout(process.exit, 0);
                     return _context.abrupt("break", 28);
 
                 case 26:
