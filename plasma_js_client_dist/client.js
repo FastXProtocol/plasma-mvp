@@ -4,6 +4,10 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _typeof2 = require('babel-runtime/helpers/typeof');
+
+var _typeof3 = _interopRequireDefault(_typeof2);
+
 var _axios = require('axios');
 
 var _axios2 = _interopRequireDefault(_axios);
@@ -30,6 +34,7 @@ var _RootChain2 = _interopRequireDefault(_RootChain);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+var root = (typeof self === 'undefined' ? 'undefined' : (0, _typeof3.default)(self)) === 'object' && self.self === self && self || (typeof global === 'undefined' ? 'undefined' : (0, _typeof3.default)(global)) === 'object' && global.global === global && global || undefined;
 var web3 = (0, _getWeb2.default)();
 var rootChain = new web3.eth.Contract(_RootChain2.default.abi, _config2.default.rootChainAddress);
 
@@ -83,12 +88,14 @@ var client = {
         var address1 = arguments.length > 19 && arguments[19] !== undefined ? arguments[19] : null;
         var address2 = arguments.length > 20 && arguments[20] !== undefined ? arguments[20] : null;
 
-        //         if (sign1 == null && address1 == null){
-        //             throw new Error("sign1 and address1 can not both be none");
-        //         }
-        //         if (sign2 == null && address2 == null){
-        //             throw new Error("sign2 and address2 can not both be none");
-        //         }
+        if (!root.process) {
+            if (sign1 == null && address1 == null) {
+                throw new Error("sign1 and address1 can not both be none");
+            }
+            if (sign2 == null && address2 == null) {
+                throw new Error("sign2 and address2 can not both be none");
+            }
+        }
         if (expiretimestamp == null) {
             expiretimestamp = Math.ceil(Date.now() / 1000) + 3600;
         }

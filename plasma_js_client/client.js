@@ -7,6 +7,9 @@ import config from "./config";
 import RootChain from "../contract_data/RootChain";
 
 
+const root = (typeof self === 'object' && self.self === self && self) ||
+  (typeof global === 'object' && global.global === global && global) ||
+  this;
 const web3 = getWeb3();
 const rootChain = new web3.eth.Contract(RootChain.abi, config.rootChainAddress);
 
@@ -57,12 +60,14 @@ const client = {
            newowner2, contractaddress2, amount2, tokenid2,
            fee=0, expiretimestamp=null, salt=null,
            sign1=null, sign2=null, address1=null, address2=null) => {
-//         if (sign1 == null && address1 == null){
-//             throw new Error("sign1 and address1 can not both be none");
-//         }
-//         if (sign2 == null && address2 == null){
-//             throw new Error("sign2 and address2 can not both be none");
-//         }
+        if (!root.process){
+            if (sign1 == null && address1 == null){
+                throw new Error("sign1 and address1 can not both be none");
+            }
+            if (sign2 == null && address2 == null){
+                throw new Error("sign2 and address2 can not both be none");
+            }
+        }
         if (expiretimestamp == null){
             expiretimestamp = Math.ceil(Date.now() / 1000) + 3600;
         }
