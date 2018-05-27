@@ -135,6 +135,76 @@ var client = {
         } else {
             afterSign1(sign1);
         }
+    },
+    sendPsTransaction: function sendPsTransaction(blknum1, txindex1, oindex1, newowner1, contractaddress1, amount1, tokenid1, contractaddress2, amount2, tokenid2) {
+        var fee = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : 0;
+        var expiretimestamp = arguments.length > 11 && arguments[11] !== undefined ? arguments[11] : null;
+        var salt = arguments.length > 12 && arguments[12] !== undefined ? arguments[12] : null;
+        var sign1 = arguments.length > 13 && arguments[13] !== undefined ? arguments[13] : null;
+        var address1 = arguments.length > 14 && arguments[14] !== undefined ? arguments[14] : null;
+
+        if (!root.process) {
+            if (sign1 == null && address1 == null) {
+                throw new Error("sign1 and address1 can not both be none");
+            }
+        }
+        if (expiretimestamp == null) {
+            expiretimestamp = Math.ceil(Date.now() / 1000) + 3600;
+        }
+        if (salt == null) {
+            salt = Math.floor(Math.random() * 1000000000000);
+        }
+        contractaddress1 = client.normalizeAddress(contractaddress1);
+        newowner1 = client.normalizeAddress(newowner1);
+        contractaddress2 = client.normalizeAddress(contractaddress2);
+
+        var txRaw = [blknum1, txindex1, oindex1, 0, 0, 0, newowner1, contractaddress1, amount1, tokenid1, client.normalizeAddress("0x0"), contractaddress2, amount2, tokenid2, fee, expiretimestamp, salt];
+
+        var afterSign1 = function afterSign1(sign1) {
+            sign1 = sign1.substr(2);
+            var txRawWithKeys = txRaw.concat([new Buffer(sign1, 'hex'), new Buffer("0", 'hex')]);
+            var txEncoded = _rlp2.default.encode(txRawWithKeys);
+            console.log("sending ps transaction ...");
+            return client.makeChildChainRpcRequest("apply_ps_transaction", [txEncoded.toString('hex')]);
+        };
+
+        if (sign1 == null) {
+            var hash1 = client.hashTransaction([blknum1, txindex1, oindex1, newowner1, contractaddress1, amount1, tokenid1, contractaddress2, amount2, tokenid2, fee, expiretimestamp, salt]);
+            (0, _sign2.default)(hash1).then(afterSign1);
+        } else {
+            afterSign1(sign1);
+        }
+    },
+    sendPsTransactionFill: function sendPsTransactionFill(psTransaction, blknum2, txindex2, oindex2, newowner2) {
+        var sign2 = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : null;
+        var address2 = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : null;
+
+        if (!root.process) {
+            if (sign2 == null && address2 == null) {
+                throw new Error("sign2 and address2 can not both be none");
+            }
+        }
+
+        var blknum1 = psTransaction.blknum1;
+        var txindex1 = psTransaction.txindex1;
+        var oindex1 = psTransaction.oindex1;
+        var newowner1 = "0x" + psTransaction.newowner1;
+        var contractaddress1 = "0x" + psTransaction.contractaddress1;
+        var amount1 = psTransaction.amount1;
+        var tokenid1 = psTransaction.tokenid1;
+        var contractaddress2 = "0x" + psTransaction.contractaddress2;
+        var amount2 = psTransaction.amount2;
+        var tokenid2 = psTransaction.tokenid2;
+        var fee = psTransaction.fee;
+        var expiretimestamp = psTransaction.expiretimestamp;
+        var salt = psTransaction.salt;
+
+        var sign1 = "0x" + psTransaction.sig1;
+
+        client.sendTransaction(blknum1, txindex1, oindex1, blknum2, txindex2, oindex2, newowner1, contractaddress1, amount1, tokenid1, newowner2, contractaddress2, amount2, tokenid2, fee, expiretimestamp, salt, sign1, sign2, null, address2);
+    },
+    getAllPsTransactions: function getAllPsTransactions() {
+        return client.makeChildChainRpcRequest("get_all_ps_transactions", []);
     }
 };
 

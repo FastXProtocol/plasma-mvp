@@ -2,11 +2,13 @@ from werkzeug.wrappers import Request, Response
 from werkzeug.serving import run_simple
 from jsonrpc import JSONRPCResponseManager, dispatcher
 from plasma.child_chain.child_chain import ChildChain
+from plasma.child_chain.partially_signed_transaction_pool import PartiallySignedTransactionPool
 from plasma.config import plasma_config
 from plasma.root_chain.deployer import Deployer
 
 root_chain = Deployer().get_contract_at_address("RootChain", plasma_config['ROOT_CHAIN_CONTRACT_ADDRESS'], concise=False)
-child_chain = ChildChain(plasma_config['AUTHORITY'], root_chain)
+partially_signed_transaction_pool = PartiallySignedTransactionPool()
+child_chain = ChildChain(plasma_config['AUTHORITY'], root_chain, partially_signed_transaction_pool=partially_signed_transaction_pool)
 
 
 @Request.application
@@ -21,6 +23,8 @@ def application(request):
     dispatcher["get_balance"] = lambda address, block: child_chain.get_balance(address, block)
     dispatcher["get_utxo"] = lambda address, block: child_chain.get_utxo(address, block)
     dispatcher["get_all_transactions"] = lambda: child_chain.get_all_transactions()
+    dispatcher["apply_ps_transaction"] = lambda ps_transaction: partially_signed_transaction_pool.apply_ps_transaction(ps_transaction)
+    dispatcher["get_all_ps_transactions"] = lambda: partially_signed_transaction_pool.get_all_ps_transactions()
     # MetaMask interface
     dispatcher["eth_getBalance"] = lambda address, block: child_chain.get_balance(address, block)
     dispatcher["eth_getBlockByNumber"] = lambda block, deep: child_chain.get_block_by_num(block, deep)
