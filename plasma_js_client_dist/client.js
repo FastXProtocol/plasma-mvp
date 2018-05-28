@@ -28,7 +28,7 @@ var _config = require('./config');
 
 var _config2 = _interopRequireDefault(_config);
 
-var _RootChain = require('../contract_data/RootChain');
+var _RootChain = require('../contract_data/RootChain.abi');
 
 var _RootChain2 = _interopRequireDefault(_RootChain);
 
@@ -36,7 +36,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var root = (typeof self === 'undefined' ? 'undefined' : (0, _typeof3.default)(self)) === 'object' && self.self === self && self || (typeof global === 'undefined' ? 'undefined' : (0, _typeof3.default)(global)) === 'object' && global.global === global && global || undefined;
 var web3 = (0, _getWeb2.default)();
-var rootChain = new web3.eth.Contract(_RootChain2.default.abi, _config2.default.rootChainAddress);
+var rootChain = new web3.eth.Contract(_RootChain2.default, _config2.default.rootChainAddress);
 
 var client = {
     web3: web3,

@@ -12,11 +12,12 @@ OUTPUT_DIR = 'contract_data'
 
 class Deployer(object):
 
-    def __init__(self, provider=HTTPProvider(plasma_config['NETWORK'])):
+    def __init__(self, provider=HTTPProvider(plasma_config['NETWORK']), CONTRACTS_DIR=CONTRACTS_DIR, OUTPUT_DIR=OUTPUT_DIR):
         self.w3 = Web3(provider)
+        self.CONTRACTS_DIR = CONTRACTS_DIR
+        self.OUTPUT_DIR = OUTPUT_DIR
 
-    @staticmethod
-    def get_solc_input():
+    def get_solc_input(self):
         """Walks the contract directory and returns a Solidity input dict
 
         Learn more about Solidity input JSON here: https://goo.gl/7zKBvj
@@ -30,7 +31,7 @@ class Deployer(object):
             'sources': {
                 file_name: {
                     'urls': [os.path.realpath(os.path.join(r, file_name))]
-                } for r, d, f in os.walk(CONTRACTS_DIR) for file_name in f if not file_name.startswith(".")
+                } for r, d, f in os.walk(self.CONTRACTS_DIR) for file_name in f if not file_name.startswith(".")
             }
         }
         return solc_input
@@ -46,10 +47,10 @@ class Deployer(object):
         solc_input = self.get_solc_input()
 
         # Compile the contracts
-        compilation_result = compile_standard(solc_input, allow_paths=CONTRACTS_DIR)
+        compilation_result = compile_standard(solc_input, allow_paths=self.CONTRACTS_DIR)
 
         # Create the output folder if it doesn't already exist
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        os.makedirs(self.OUTPUT_DIR, exist_ok=True)
 
         # Write the contract ABI to output files
         compiled_contracts = compilation_result['contracts']
@@ -58,12 +59,15 @@ class Deployer(object):
                 contract_name = contract.split('.')[0]
                 contract_data = compiled_contracts[contract_file][contract_name]
 
-                contract_data_path = OUTPUT_DIR + '/{0}.json'.format(contract_name)
+                contract_data_path = self.OUTPUT_DIR + '/{0}.json'.format(contract_name)
                 with open(contract_data_path, "w+") as contract_data_file:
                     json.dump(contract_data, contract_data_file)
 
-    @staticmethod
-    def get_contract_data(contract_name):
+                contract_data_path = self.OUTPUT_DIR + '/{0}.abi.json'.format(contract_name)
+                with open(contract_data_path, "w+") as contract_data_file:
+                    json.dump(contract_data["abi"], contract_data_file)
+
+    def get_contract_data(self, contract_name):
         """Returns the contract data for a given contract
 
         Args:
@@ -73,7 +77,7 @@ class Deployer(object):
             str, str: ABI and bytecode of the contract
         """
 
-        contract_data_path = OUTPUT_DIR + '/{0}.json'.format(contract_name)
+        contract_data_path = self.OUTPUT_DIR + '/{0}.json'.format(contract_name)
         with open(contract_data_path, 'r') as contract_data_file:
             contract_data = json.load(contract_data_file)
 

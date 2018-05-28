@@ -1,0 +1,18 @@
+<html>
+    <head>
+        <title>Plasma Demo</title>
+    </head>
+    <body>
+        <h2>Plasma Demo, Hello <span id="coinbase"></span></h2>
+        <script src="plasma_js_client.js"></script>
+        <script>
+            const client = window.plasmaClient.client;
+            const web3 = client.web3;
+
+            web3.eth.getCoinbase().then(coinbase => {
+                document.getElementById("coinbase").innerHTML = coinbase;
+            });
+
+        </script>
+    </body>
+</html>

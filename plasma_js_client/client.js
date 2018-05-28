@@ -4,14 +4,14 @@ import rlp from 'rlp';
 import getWeb3 from "./utils/getWeb3";
 import sign from "./utils/sign";
 import config from "./config";
-import RootChain from "../contract_data/RootChain";
+import RootChain from "../contract_data/RootChain.abi";
 
 
 const root = (typeof self === 'object' && self.self === self && self) ||
   (typeof global === 'object' && global.global === global && global) ||
   this;
 const web3 = getWeb3();
-const rootChain = new web3.eth.Contract(RootChain.abi, config.rootChainAddress);
+const rootChain = new web3.eth.Contract(RootChain, config.rootChainAddress);
 
 
 const client = {
