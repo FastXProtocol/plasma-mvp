@@ -20,3 +20,11 @@ class TxAmountMismatchException(Exception):
 
 class InvalidBlockMerkleException(Exception):
     """merkle tree of a block is invalid"""
+
+
+class PsTxAlreadyExistsException(Exception):
+    """the ps transaction already exists"""
+
+
+class PsTxExpiredException(Exception):
+    """the ps transaction is expired"""

@@ -6,6 +6,9 @@ from plasma.utils.utils import sign, get_sender
 from plasma.child_chain.transaction import Transaction
 
 
+EXPIRE_BUFFER_SECONDS = 600
+
+
 class Block(rlp.Serializable):
 
     fields = [

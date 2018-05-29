@@ -120,9 +120,20 @@ class Transaction(rlp.Serializable):
     def sender2(self):
         return get_sender(self.hash2, self.sig2)
     
+    def to_json(self):
+        res = {}
+        for field_name, field_type in self.fields:
+            field_value = getattr(self, field_name)
+            if field_type == binary:
+                field_value = field_value.hex()
+            elif field_type == utils.address:
+                field_value = utils.decode_addr(field_value)
+            res[field_name] = field_value
+        return res
+    
     def __str__(self):
         res = []
-        for field_name, field_type in self.fields:
+        for field_name, field_type in UnsignedTransaction0.fields:
             if field_type == binary:
                 continue
             field_value = getattr(self, field_name)

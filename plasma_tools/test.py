@@ -13,10 +13,10 @@ from web3 import Web3, HTTPProvider
 from plasma.cli import cli
 from plasma.config import plasma_config
 from plasma_tools.config import tools_config
-from plasma_tools.deployment import Deployer
+from plasma.root_chain.deployer import Deployer
 
 
-w3 = Web3(HTTPProvider('http://localhost:8545'))
+w3 = Web3(HTTPProvider(plasma_config['NETWORK']))
 deployer = Deployer()
 erc721_contract = deployer.get_contract_at_address("ERC721Token", tools_config['ERC721_CONTRACT_ADDRESS'], concise=True)
 erc20_contract = deployer.get_contract_at_address("EIP20", tools_config['ERC20_CONTRACT_ADDRESS'], concise=True)

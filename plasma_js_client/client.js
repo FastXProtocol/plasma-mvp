@@ -4,14 +4,14 @@ import rlp from 'rlp';
 import getWeb3 from "./utils/getWeb3";
 import sign from "./utils/sign";
 import config from "./config";
-import RootChain from "../contract_data/RootChain";
+import RootChain from "../contract_data/RootChain.abi";
 
 
 const root = (typeof self === 'object' && self.self === self && self) ||
   (typeof global === 'object' && global.global === global && global) ||
   this;
 const web3 = getWeb3();
-const rootChain = new web3.eth.Contract(RootChain.abi, config.rootChainAddress);
+const rootChain = new web3.eth.Contract(RootChain, config.rootChainAddress);
 
 
 const client = {
@@ -117,7 +117,87 @@ const client = {
         } else {
             afterSign1(sign1);
         }
-    }
+    },
+    sendPsTransaction: (blknum1, txindex1, oindex1,
+           newowner1, contractaddress1, amount1, tokenid1,
+           contractaddress2, amount2, tokenid2,
+           fee=0, expiretimestamp=null, salt=null,
+           sign1=null, address1=null) => {
+        if (!root.process){
+            if (sign1 == null && address1 == null){
+                throw new Error("sign1 and address1 can not both be none");
+            }
+        }
+        if (expiretimestamp == null){
+            expiretimestamp = Math.ceil(Date.now() / 1000) + 3600;
+        }
+        if (salt == null) {
+            salt = Math.floor(Math.random() * 1000000000000);
+        }
+        contractaddress1 = client.normalizeAddress(contractaddress1);
+        newowner1 = client.normalizeAddress(newowner1);
+        contractaddress2 = client.normalizeAddress(contractaddress2);
+        
+        let txRaw = [blknum1, txindex1, oindex1,
+           0, 0, 0,
+           newowner1, contractaddress1, amount1, tokenid1,
+           client.normalizeAddress("0x0"), contractaddress2, amount2, tokenid2,
+           fee, expiretimestamp, salt];
+                
+        let afterSign1 = (sign1) => {
+            sign1 = sign1.substr(2);
+            let txRawWithKeys = txRaw.concat([new Buffer(sign1, 'hex'), new Buffer("0", 'hex')]);
+            let txEncoded = rlp.encode(txRawWithKeys);
+            console.log("sending ps transaction ...");
+            return client.makeChildChainRpcRequest("apply_ps_transaction", [txEncoded.toString('hex')]);
+        }
+        
+        if (sign1 == null){
+            let hash1 = client.hashTransaction([blknum1, txindex1, oindex1,
+               newowner1, contractaddress1, amount1, tokenid1,
+               contractaddress2, amount2, tokenid2,
+               fee, expiretimestamp, salt]);
+            sign(hash1).then(afterSign1);
+        } else {
+            afterSign1(sign1);
+        }
+    },
+    sendPsTransactionFill: (psTransaction,
+           blknum2, txindex2, oindex2,
+           newowner2,
+           sign2=null, address2=null) => {
+        if (!root.process){
+            if (sign2 == null && address2 == null){
+                throw new Error("sign2 and address2 can not both be none");
+            }
+        }
+        
+        const blknum1 = psTransaction.blknum1;
+        const txindex1 = psTransaction.txindex1;
+        const oindex1 = psTransaction.oindex1;
+        const newowner1 = "0x" + psTransaction.newowner1;
+        const contractaddress1 = "0x" + psTransaction.contractaddress1;
+        const amount1 = psTransaction.amount1;
+        const tokenid1 = psTransaction.tokenid1;
+        const contractaddress2 = "0x" + psTransaction.contractaddress2;
+        const amount2 = psTransaction.amount2;
+        const tokenid2 = psTransaction.tokenid2;
+        const fee = psTransaction.fee;
+        const expiretimestamp = psTransaction.expiretimestamp;
+        const salt = psTransaction.salt;
+        
+        const sign1 = "0x" + psTransaction.sig1;
+        
+        client.sendTransaction(blknum1, txindex1, oindex1,
+           blknum2, txindex2, oindex2,
+           newowner1, contractaddress1, amount1, tokenid1,
+           newowner2, contractaddress2, amount2, tokenid2,
+           fee, expiretimestamp, salt,
+           sign1, sign2, null, address2);
+    },
+    getAllPsTransactions: () => {
+        return client.makeChildChainRpcRequest("get_all_ps_transactions", []);
+    },
 }
 
 export default client;

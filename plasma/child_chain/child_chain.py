@@ -17,8 +17,9 @@ PICKLE_DIR = "child_chain_pickle"
 
 class ChildChain(object):
 
-    def __init__(self, authority, root_chain, load=True):
+    def __init__(self, authority, root_chain, partially_signed_transaction_pool=None, load=True):
         self.root_chain = root_chain
+        self.partially_signed_transaction_pool = partially_signed_transaction_pool
         self.authority = authority
         self.blocks = {}
         self.child_block_interval = 1000
@@ -56,7 +57,6 @@ class ChildChain(object):
                         setattr(self, field_name, pickle.load(f))
                 except Exception as e:
                     print("load %s failed: %s" % (field_name, str(e)))
-    
 
     def apply_deposit(self, event):
         event_args = event['args']
@@ -88,6 +88,9 @@ class ChildChain(object):
 
         self.current_block.transaction_set.append(tx)
         self.blocks[self.current_block_number] = self.current_block
+        
+        if self.partially_signed_transaction_pool is not None:
+            self.partially_signed_transaction_pool.remove_ps_transaction(tx)
         
         self.save()
         
