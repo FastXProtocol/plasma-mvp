@@ -27,6 +27,10 @@ var web3 = (0, _getWeb2.default)();
 
 exports.default = function (hash, address) {
     if (root.process) {
+        if (!process.env.AUTHORITY_KEY) {
+            console.error('No priv key! Did you set the AUTHORITY_KEY in .env file? Abort.');
+            process.exit(-1);
+        }
         return new _promise2.default(function (resolve, reject) {
             return resolve(_account2.default.sign(hash, process.env.AUTHORITY_KEY));
         });
