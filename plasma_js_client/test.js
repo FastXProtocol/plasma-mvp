@@ -1,7 +1,15 @@
-import client from "./client";
+import Client from "./client";
 
+const options = {
+    debug: true,
+    gethRpc: "http://dev2.msan.cn:8545",
+    fastXRpc: "http://dev2.msan.cn:8546/jsonrpc",
+    rootChainAddress: "0xD9FA1cbB70b74f3Ef259CE0eb48029F02eE0FcD1",
+};
 
-const ownerAddress = "0xfd02EcEE62797e75D86BCff1642EB0844afB28c7";
+const client = new Client(options);
+
+const ownerAddress = "0xd103C64735B324161518F17CeF15D1E27e0b9F3E";
 
 
 const logBalance = async (address=ownerAddress) => {
@@ -18,6 +26,9 @@ const getUTXOs = async (address=ownerAddress) => {
 const testTx = async () => {
     console.log("---------- testing transaction ----------");
     try {
+        // console.log(client.web3.currentProvider);
+        // let res = await client.unlockAccount(ownerAddress, 'abc123');
+        // await client.web3.personal.unlockAccount(ownerAddress, 'abc123');
         await client.sendDeposit("0x0", 100, 0, ownerAddress);
         await logBalance();
         let utxos = await getUTXOs();
@@ -62,7 +73,7 @@ const testPsTx = async () => {
 
 const main = async () => {
     await testTx();
-    await testPsTx();
+    // await testPsTx();
     process.exit();
 };
 
