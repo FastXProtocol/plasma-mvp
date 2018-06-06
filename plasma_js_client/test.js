@@ -4,13 +4,13 @@ import client from "./client";
 const ownerAddress = "0xfd02EcEE62797e75D86BCff1642EB0844afB28c7";
 
 
-const logBalance = async (address=testAddress) => {
+const logBalance = async (address=ownerAddress) => {
     let res = (await client.getBalance(ownerAddress)).data.result
     console.log("balance", res);
 };
 
 
-const getUTXOs = async (address=testAddress) => {
+const getUTXOs = async (address=ownerAddress) => {
     return (await client.getUTXO(ownerAddress)).data.result;
 }
 
