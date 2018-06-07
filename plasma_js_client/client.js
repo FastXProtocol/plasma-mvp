@@ -207,28 +207,40 @@ class Client {
     };
 
     /**
-     * Send ETH.
+     * Send ETH in FastX chain.
      * @method
      * @param {string} to - the receiver's address.
      * @param {string} amount - the amount to send, in wei.
      * @param {Object} options - including from: the sender's address.
      */
     async sendEth(to, amount, options={}) {
+        if (amount <= 0) return console.warn('WARNING: amount must be > 0');
+        
         let from = options.from || this.defaultAccount;
-        console.log('from: '+from);
+        if (this.debug) console.log('from: '+from);
         let utxos = (await this.getUTXO(from)).data.result;
         if (this.debug) console.log(utxos);
-        let utxo;
+
+        let utxo, txPromise, tx_amount=0, remainder=amount;
         for(let i in utxos){
             utxo = utxos[utxos.length - i - 1];
             const [blknum, txindex, oindex, contract, balance, tokenid] = utxo;
             if (balance > 0){
                 if (this.debug) console.log(blknum, txindex, oindex, contract, balance, tokenid);
-                return this.sendTransaction(
+
+                remainder = remainder - balance;
+                tx_amount = (remainder >= 0) ? balance : balance + remainder;
+                if (this.debug) console.log('output 0: ' + (balance - tx_amount) + ', output 1: ' + tx_amount)
+
+                txPromise = this.sendTransaction(
                     blknum, txindex, oindex, 
                     0, 0, 0, 
-                    from, contract, balance - amount, tokenid, 
-                    to, contract, amount, tokenid);
+                    from, contract, balance - tx_amount, tokenid, 
+                    to, contract, tx_amount, tokenid);
+
+                if (remainder <= 0) {
+                    return txPromise;
+                }
             }
         }
     };
