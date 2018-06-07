@@ -130,7 +130,7 @@ class Client {
      * @param {string} contractaddress1 - asset address for output 1, 0x0 if ETH.
      * @param {number} amount1 - the amount of asset for that address.
      * @param {number} tokenid1 - asset id for that address, 0 if not applicable.
-     * @param {string} newowner2 - owner of output 1.
+     * @param {string} newowner2 - owner of output 2.
      * @param {string} contractaddress2 - asset address for output 2, 0x0 if ETH.
      * @param {number} amount2 - the amount of asset for that address.
      * @param {number} tokenid2 - asset id for that address, 0 if not applicable.
@@ -147,7 +147,8 @@ class Client {
            newowner1, contractaddress1, amount1, tokenid1,
            newowner2, contractaddress2, amount2, tokenid2,
            fee=0, expiretimestamp=null, salt=null,
-           sign1=null, sign2=null, address1=null, address2=null) {
+           sign1=null, sign2=null, address1=null, address2=null
+    ) {
         if (!root.process){
             if (sign1 == null && address1 == null){
                 throw new Error("sign1 and address1 can not both be none");
@@ -207,49 +208,31 @@ class Client {
     };
 
     /**
-     * Send ETH in FastX chain.
+     * Send a partially signed transaction.
      * @method
-     * @param {string} to - the receiver's address.
-     * @param {string} amount - the amount to send, in wei.
-     * @param {Object} options - including from: the sender's address.
+     * @param {number} blknum1 - block number of input 1.
+     * @param {number} txindex1 - transaction number in that block for input 1.
+     * @param {number} oindex1 - output number of that transaction for input 1.
+     * @param {string} newowner1 - owner of output 1.
+     * @param {string} contractaddress1 - asset address for output 1, 0x0 if ETH.
+     * @param {number} amount1 - the amount of asset for that address.
+     * @param {number} tokenid1 - asset id for that address, 0 if not applicable.
+     * @param {string} contractaddress2 - asset address for output 2, 0x0 if ETH.
+     * @param {number} amount2 - the amount of asset for that address.
+     * @param {number} tokenid2 - asset id for that address, 0 if not applicable.
+     * @param {number} [fee] - transacton fee.
+     * @param {number} [expiretimestamp] - expiration time for the transaction.
+     * @param {number} [salt] - salt.
+     * @param {string} [sign1] - owner1's signature.
+     * @param {string} [address1] - owner1's receiving address.
      */
-    async sendEth(to, amount, options={}) {
-        if (amount <= 0) return console.warn('WARNING: amount must be > 0');
-        
-        let from = options.from || this.defaultAccount;
-        if (this.debug) console.log('from: '+from);
-        let utxos = (await this.getUTXO(from)).data.result;
-        if (this.debug) console.log(utxos);
-
-        let utxo, txPromise, tx_amount=0, remainder=amount;
-        for(let i in utxos){
-            utxo = utxos[utxos.length - i - 1];
-            const [blknum, txindex, oindex, contract, balance, tokenid] = utxo;
-            if (balance > 0){
-                if (this.debug) console.log(blknum, txindex, oindex, contract, balance, tokenid);
-
-                remainder = remainder - balance;
-                tx_amount = (remainder >= 0) ? balance : balance + remainder;
-                if (this.debug) console.log('output 0: ' + (balance - tx_amount) + ', output 1: ' + tx_amount)
-
-                txPromise = this.sendTransaction(
-                    blknum, txindex, oindex, 
-                    0, 0, 0, 
-                    from, contract, balance - tx_amount, tokenid, 
-                    to, contract, tx_amount, tokenid);
-
-                if (remainder <= 0) {
-                    return txPromise;
-                }
-            }
-        }
-    };
-
-    sendPsTransaction (blknum1, txindex1, oindex1,
-           newowner1, contractaddress1, amount1, tokenid1,
-           contractaddress2, amount2, tokenid2,
-           fee=0, expiretimestamp=null, salt=null,
-           sign1=null, address1=null) {
+    async sendPsTransaction (
+            blknum1, txindex1, oindex1,
+            newowner1, contractaddress1, amount1, tokenid1,
+            contractaddress2, amount2, tokenid2,
+            fee=0, expiretimestamp=null, salt=null,
+            sign1=null, address1=null
+    ) {
         if (!root.process){
             if (sign1 == null && address1 == null){
                 throw new Error("sign1 and address1 can not both be none");
@@ -275,25 +258,37 @@ class Client {
             sign1 = sign1.substr(2);
             let txRawWithKeys = txRaw.concat([new Buffer(sign1, 'hex'), new Buffer("0", 'hex')]);
             let txEncoded = rlp.encode(txRawWithKeys);
-            console.log("sending ps transaction ...");
+            if (this.debug) console.log("sending ps transaction ...");
             return this.makeChildChainRpcRequest("apply_ps_transaction", [txEncoded.toString('hex')]);
         }
         
         if (sign1 == null){
             let hash1 = this.hashTransaction([blknum1, txindex1, oindex1,
-               newowner1, contractaddress1, amount1, tokenid1,
-               contractaddress2, amount2, tokenid2,
-               fee, expiretimestamp, salt]);
-            this.sign(hash1).then(afterSign1);
-        } else {
-            afterSign1(sign1);
-        }
+                newowner1, contractaddress1, amount1, tokenid1,
+                contractaddress2, amount2, tokenid2,
+                fee, expiretimestamp, salt]);
+            sign1 = await this.sign(hash1);
+        } 
+        if (this.debug) console.log('Sign1: '+sign1)
+        return afterSign1(sign1);       
     };
 
+    /**
+     * Fill the partially signed transaction.
+     * @method
+     * @param {string} psTransaction - the receiver's address.
+     * @param {number} blknum2 - block number of input 2.
+     * @param {number} txindex2 - transaction number in that block for input 2.
+     * @param {number} oindex2 - output number of that transaction for input 2.
+     * @param {string} newowner2 - owner of output 2.
+     * @param {string} [sign2] - owner2's signature.
+     * @param {string} [address2] - owner2's receiving address.
+     */
     sendPsTransactionFill (psTransaction,
            blknum2, txindex2, oindex2,
            newowner2,
-           sign2=null, address2=null) {
+           sign2=null, address2=null
+    ) {
         if (!root.process){
             if (sign2 == null && address2 == null){
                 throw new Error("sign2 and address2 can not both be none");
@@ -316,7 +311,7 @@ class Client {
         
         const sign1 = "0x" + psTransaction.sig1;
         
-        this.sendTransaction(blknum1, txindex1, oindex1,
+        return this.sendTransaction(blknum1, txindex1, oindex1,
            blknum2, txindex2, oindex2,
            newowner1, contractaddress1, amount1, tokenid1,
            newowner2, contractaddress2, amount2, tokenid2,
@@ -324,9 +319,86 @@ class Client {
            sign1, sign2, null, address2);
     };
 
+    /**
+     * Get all the partially signed transactions in the txpool.
+     * @method
+     */
     getAllPsTransactions () {
         return this.makeChildChainRpcRequest("get_all_ps_transactions", []);
     };
+
+    /**
+     * Send ETH in FastX chain.
+     * @method
+     * @param {string} to - the receiver's address.
+     * @param {string} amount - the amount to send, in wei.
+     * @param {Object} options - including from: the sender's address.
+     */
+    async sendEth(to, amount, options={}) {
+        if (amount <= 0) return console.warn('WARNING: amount must be > 0');
+        
+        let from = options.from || this.defaultAccount;
+        if (this.debug) console.log('from: '+from);
+        let utxos = (await this.getUTXO(from)).data.result;
+        if (this.debug) console.log(utxos);
+
+        let utxo, txPromise, tx_amount=0, remainder=amount;
+        for(let i in utxos){
+            utxo = utxos[utxos.length - i - 1];
+            const [blknum, txindex, oindex, contract, balance, tokenid] = utxo;
+            if (balance > 0){
+                if (this.debug) console.log(blknum, txindex, oindex, contract, balance, tokenid);
+
+                remainder = remainder - balance;
+                tx_amount = (remainder >= 0) ? balance : balance + remainder;
+                if (this.debug) console.log('output 0: ' + (balance - tx_amount) + ', output 1: ' + tx_amount);
+
+                txPromise = this.sendTransaction(
+                    blknum, txindex, oindex, 
+                    0, 0, 0, 
+                    from, contract, balance - tx_amount, tokenid, 
+                    to, contract, tx_amount, tokenid);
+
+                if (remainder <= 0) {
+                    return txPromise;
+                }
+            }
+        }
+    };
+
+    async sellToken(contract, tokenid, amount, options={}) {
+        if (amount <= 0) return console.warn('WARNING: amount must be > 0');
+        let from = options.from || this.defaultAccount;
+        contract = normalizeAddress(contract).toString('hex');
+        if (this.debug) console.log('from: '+from + ', contract: '+contract+', tokenid: '+tokenid);
+
+        let utxos = (await this.getUTXO(from)).data.result;
+
+        let utxo, txPromise, tx_amount=0, remainder=amount;
+        for(let i in utxos){
+            utxo = utxos[utxos.length - i - 1];
+            const [_blknum, _txindex, _oindex, _contract, _balance, _tokenid] = utxo;
+    
+            if (_balance > 0 && contract == _contract && tokenid == _tokenid){
+                if (this.debug) console.log(_blknum, _txindex, _oindex, _contract, _balance, _tokenid);
+
+                remainder = remainder - _balance;
+                tx_amount = (remainder >= 0) ? _balance : _balance + remainder;
+                if (this.debug) console.log('output 0: ' + (_balance - tx_amount) + ', output 1: ' + tx_amount);
+
+                txPromise = this.sendPsTransaction(
+                    _blknum, _txindex, _oindex, 
+                    from, 
+                    _contract, _balance - tx_amount, _tokenid, 
+                    _contract, tx_amount, _tokenid);
+
+                if (remainder <= 0) {
+                    // Done, return the latest tx
+                    return txPromise;
+                }
+            }
+        }
+    }
 }
 
 export default Client;
