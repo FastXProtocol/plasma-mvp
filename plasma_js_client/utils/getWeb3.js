@@ -11,12 +11,13 @@ const root = (typeof self === 'object' && self.self === self && self) ||
 
 let web3 = null;
 
-
 export default function getWeb3(rpcUrl) {
   if (typeof root.web3 === 'undefined') {
     // No web3 injected from the browser, use fallback...
     web3 = new Web3(rpcUrl || 'http://127.0.0.1:8545');
     root.web3 = web3;
+  } else {
+    web3 = root.web3;
   }
 
   // root.web3 == web3 most of the time, so we don't override the provided web3 and instead just wrap it in Web3
