@@ -12,7 +12,7 @@ export const root = (typeof self === 'object' && self.self === self && self) ||
   (typeof global === 'object' && global.global === global && global) ||
   this;
 
-function normalizeAddress (address) {
+export function normalizeAddress (address) {
     if (!address) {
         throw new Error();
     }
@@ -94,10 +94,16 @@ class Client {
                 ", amount: " + amount +
                 ", tokenid: " + tokenid +
                 ", account: " + account);
+
+        let transact = {from: account, gas: 2873385};
+        let aContract = normalizeAddress(contractAddress);
+        if ('0'.repeat(40) == aContract.toString('hex')) {
+            transact.value = amount;
+        }
         return this.rootChain.methods.deposit(
                 contractAddress, amount, tokenid
             ).send(
-                {from: account, value: amount}
+                transact
             ).on('transactionHash',
                 (hash) => {
                     if (this.debug) console.log(hash);
@@ -220,6 +226,7 @@ class Client {
             sign1 = sign1.substr(2);
             sign2 = sign2.substr(2);
             let txRawWithKeys = txRaw.concat([new Buffer(sign1, 'hex'), new Buffer(sign2, 'hex')]);
+            if (this.debug) console.log('\nTxRaw: ', txRawWithKeys);
             let txEncoded = rlp.encode(txRawWithKeys);
             if (this.debug) console.log("sending transaction ...");
             return this.makeChildChainRpcRequest("apply_transaction", [txEncoded.toString('hex')]);
@@ -231,9 +238,10 @@ class Client {
                    contractaddress1, amount1, tokenid1,
                    newowner2, contractaddress2, amount2, tokenid2,
                    fee, expiretimestamp, salt]);
+                // if (this.debug) console.log('Hash2: '+hash2);
                 sign2 = await this.sign(hash2);
             }
-            if (this.debug) console.log('Sign2: '+sign2);
+            // if (this.debug) console.log('Sign2: '+sign2);
             return afterSign2(sign1, sign2);
         }
         
@@ -242,10 +250,10 @@ class Client {
                newowner1, contractaddress1, amount1, tokenid1,
                contractaddress2, amount2, tokenid2,
                fee, expiretimestamp, salt]);
-            if (this.debug) console.log('Hash1: '+hash1);
+            // if (this.debug) console.log('Hash1: '+hash1);
             sign1 = await this.sign(hash1);
         } 
-        if (this.debug) console.log('Sign1: '+sign1)
+        // if (this.debug) console.log('Sign1: '+sign1)
         return afterSign1(sign1);
     };
 
