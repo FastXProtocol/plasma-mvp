@@ -3,6 +3,7 @@
 
 # Development
 env/
+plasma_js_client_dist/
 
 # Distibution
 dist/
