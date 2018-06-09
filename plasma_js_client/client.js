@@ -4,6 +4,9 @@ import rlp from 'rlp';
 import getWeb3 from "./utils/getWeb3";
 import Account from "eth-lib/lib/account";
 import RootChain from "../contract_data/RootChain.abi";
+import Erc20Interface from "../contract_data/ERC20.abi";
+import Erc721Interface from "../contract_data/ERC721Basic.abi";
+
 
 export const root = (typeof self === 'object' && self.self === self && self) ||
   (typeof global === 'object' && global.global === global && global) ||
@@ -80,7 +83,7 @@ class Client {
      * @param {string} amount - the depositing amount.
      * @param {Object} options - including from: the asset owner's address.
      */
-    deposit (contractAddress, tokenid, amount, options={}) {
+    deposit (contractAddress, amount, tokenid, options={}) {
         let account = options.from;
         if (!account) {
             if (this.defaultAccount) account = this.defaultAccount;
@@ -95,6 +98,45 @@ class Client {
                 contractAddress, amount, tokenid
             ).send(
                 {from: account, value: amount}
+            ).on('transactionHash',
+                (hash) => {
+                    if (this.debug) console.log(hash);
+                }
+            );
+    };
+    
+    getErc20Interface (contractAddress) {
+        return new this.web3.eth.Contract(Erc20Interface, contractAddress);
+    };
+    
+    getErc721Interface (contractAddress) {
+        return new this.web3.eth.Contract(Erc721Interface, contractAddress);
+    };
+    
+    approve (contractAddress, amount, tokenid, options={}) {
+        if(tokenid == 0 && amount == 0){
+            throw new Error('tokenid and amount can not both be zero');
+        }
+        let account = options.from;
+        if (!account) {
+            if (this.defaultAccount) account = this.defaultAccount;
+            else throw new Error('No default account specified!');
+        } 
+        if (this.debug)
+            console.log("approve contractAddress: " + contractAddress +
+                ", amount: " + amount +
+                ", tokenid: " + tokenid +
+                ", account: " + account);
+        let tokenInterface = null;
+        if (this.tokenid != 0) {
+            tokenInterface = this.getErc721Interface(contractAddress);
+        } else {
+            tokenInterface = this.getErc20Interface(contractAddress);
+        }
+        return tokenInterface.methods.approve(
+                this.rootChainAddress, this.tokenid != 0? tokenid: amount
+            ).send(
+                {from: account, value: 0}
             ).on('transactionHash',
                 (hash) => {
                     if (this.debug) console.log(hash);
@@ -366,7 +408,7 @@ class Client {
         }
     };
 
-    async sellToken(contract, tokenid, amount, options={}) {
+    async sellToken(contract, amount, tokenid, options={}) {
         if (amount <= 0) return console.warn('WARNING: amount must be > 0');
         let from = options.from || this.defaultAccount;
         contract = normalizeAddress(contract).toString('hex');
@@ -398,7 +440,7 @@ class Client {
                 }
             }
         }
-    }
+    };
 }
 
 export default Client;
