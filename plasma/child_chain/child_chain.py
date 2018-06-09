@@ -93,7 +93,7 @@ class ChildChain(object):
         if not valid_signature:
             raise InvalidBlockSignatureException('failed to submit block')
 
-        self.root_chain.transact({'from': '0x' + self.authority.hex()}).submitBlock(block.merkle.root)
+        self.root_chain.transact({'from': '0x' + self.authority.hex()}).submitBlock(block.merkle.root, self.current_block_number)
         # TODO: iterate through block and validate transactions
         self.blocks[self.current_block_number] = self.current_block
         self.current_block_number += 1

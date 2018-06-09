@@ -55,8 +55,6 @@ class Deployer(object):
 
         # Contract instance in concise mode
         contract_instance = self.w3.eth.contract(abi, contract_address, ContractFactoryClass=ConciseContract)
-        with open('contract_data/%s.json' % contract_name, "w") as f:
-            f.write(json.dumps(abi))
         print("Successfully deployed {} contract!".format(contract_name))
         return contract_instance
 
