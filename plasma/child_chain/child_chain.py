@@ -89,8 +89,8 @@ class ChildChain(object):
         self.current_block.transaction_set.append(tx)
         self.blocks[self.current_block_number] = self.current_block
         
-        if self.partially_signed_transaction_pool is not None:
-            self.partially_signed_transaction_pool.remove_ps_transaction(tx)
+#         if self.partially_signed_transaction_pool is not None:
+#             self.partially_signed_transaction_pool.remove_ps_transaction(tx)
         
         self.save()
         
@@ -187,6 +187,9 @@ class ChildChain(object):
             self.blocks[blknum].transaction_set[txindex].spent1 = True
         else:
             self.blocks[blknum].transaction_set[txindex].spent2 = True
+        
+        if self.partially_signed_transaction_pool is not None:
+            self.partially_signed_transaction_pool.utxo_spent(blknum, txindex, oindex)
 
     def submit_block(self, block):
         block = rlp.decode(utils.decode_hex(block), Block)
