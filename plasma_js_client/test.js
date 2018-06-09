@@ -42,21 +42,19 @@ const getPsTx = async () => {
     return (await client.getAllPsTransactions()).data.result;
 }
 
+const sleep = async (millisecond) => {
+    await new Promise(resolve => setTimeout(resolve, millisecond));
+}
+
 const testTx = async () => {
     console.log("---------- testing transaction ----------");
-    try {
-        await client.deposit("0x0", 0, 100);
-        await logBalance();
+    await client.deposit("0x0", 0, 100);
+    await logBalance();
 
-        await client.sendEth(receiverAddress, 150);
+    await client.sendEth(receiverAddress, 150);
 
-        await logBalance();
-        await logBalance(receiverAddress);
-
-    } catch(e) {
-        console.log(e);
-        process.exit();
-    }
+    await logBalance();
+    await logBalance(receiverAddress);
 };
 
 
@@ -85,8 +83,12 @@ const testPsTx = async () => {
 
 
 const main = async () => {
-//     await testTx();
-    await testPsTx();
+    try{
+//         await testTx();
+        await testPsTx();
+    } catch(e) {
+        console.log(e);
+    }
     process.exit();
 };
 
