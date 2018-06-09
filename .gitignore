@@ -3,6 +3,7 @@
 
 # Development
 env/
+plasma_js_client_dist/
 
 # Distibution
 dist/
@@ -15,3 +16,8 @@ contract_data/
 
 *.pyc
 build/
+
+node_modules/
+child_chain_pickle/
+
+.env

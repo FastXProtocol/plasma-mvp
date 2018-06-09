@@ -1,0 +1,24 @@
+{
+  "name": "fastx-sdk",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "axios": "^0.18.0",
+    "babel-runtime": "^6.26.0",
+    "dotenv": "^5.0.1",
+    "rlp": "^2.0.0",
+    "web3": "^1.0.0-beta.34"
+  },
+  "scripts": {
+    "build": "babel plasma_js_client -d plasma_js_client_dist",
+    "package": "npm run build && ./node_modules/webpack-cli/bin/webpack.js",
+    "test": "npm run build && node -r dotenv/config plasma_js_client_dist/test"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-plugin-transform-runtime": "^6.23.0",
+    "babel-preset-env": "^1.7.0",
+    "webpack": "^4.9.1",
+    "webpack-cli": "^2.1.4"
+  }
+}

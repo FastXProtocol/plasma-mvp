@@ -24,6 +24,7 @@ setup(
         'py-solc',
         'click==6.7',
         'pytest',
+        'python-dotenv',
         'eth-abi==0.5.0',
         'eth-hash==0.1.0',
         'eth-keyfile==0.4.1',
@@ -32,6 +33,6 @@ setup(
         'eth-utils==0.7.3'
     ],
     entry_points={
-        'console_scripts': ["omg=plasma.cli:main"],
+        'console_scripts': ["omg=plasma.cli:cli"],
     }
 )

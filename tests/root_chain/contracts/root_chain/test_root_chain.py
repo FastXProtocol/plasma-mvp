@@ -7,7 +7,7 @@ from plasma.utils.utils import confirm_tx, get_deposit_hash
 
 @pytest.fixture
 def root_chain(t, get_contract):
-    contract = get_contract('RootChain/RootChain.sol')
+    contract = get_contract('RootChain')
     t.chain.mine()
     return contract
 
@@ -22,24 +22,51 @@ def test_deposit(t, u, root_chain):
 
 
 def test_start_deposit_exit(t, u, root_chain, assert_tx_failed):
+    two_weeks = 60 * 60 * 24 * 7 * 2
     value_1 = 100
+    # Deposit once to make sure everything works for deposit block
+    root_chain.deposit(value=value_1)
     blknum = root_chain.getDepositBlock()
     root_chain.deposit(value=value_1)
-    expected_utxo_pos = blknum * 1000000000 + 1
-    expected_created_at = t.chain.head_state.timestamp
+    expected_utxo_pos = blknum * 1000000000
+    expected_exitable_at = t.chain.head_state.timestamp + two_weeks
     root_chain.startDepositExit(expected_utxo_pos, value_1)
-    utxo_pos, created_at = root_chain.getNextExit()
+    utxo_pos, exitable_at = root_chain.getNextExit()
     assert utxo_pos == expected_utxo_pos
-    assert created_at == expected_created_at
+    assert exitable_at == expected_exitable_at
     assert root_chain.exits(utxo_pos) == ['0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1', 100]
     # Same deposit cannot be exited twice
     assert_tx_failed(lambda: root_chain.startDepositExit(utxo_pos, value_1))
     # Fails if transaction sender is not the depositor
     assert_tx_failed(lambda: root_chain.startDepositExit(utxo_pos, value_1, sender=t.k1))
     # Fails if utxo_pos is wrong
-    assert_tx_failed(lambda: root_chain.startDepositExit(utxo_pos + 1, value_1))
+    assert_tx_failed(lambda: root_chain.startDepositExit(utxo_pos * 2, value_1))
     # Fails if value given is not equal to deposited value
     assert_tx_failed(lambda: root_chain.startDepositExit(utxo_pos, value_1 + 1))
+
+
+def test_start_fee_exit(t, u, root_chain, assert_tx_failed):
+    two_weeks = 60 * 60 * 24 * 7 * 2
+    value_1 = 100
+    blknum = root_chain.getDepositBlock()
+    root_chain.deposit(value=value_1)
+    expected_utxo_pos = root_chain.currentFeeExit()
+    expected_exitable_at = t.chain.head_state.timestamp + two_weeks + 1
+    assert root_chain.currentFeeExit() == 1
+    root_chain.startFeeExit(1)
+    assert root_chain.currentFeeExit() == 2
+    utxo_pos, exitable_at = root_chain.getNextExit()
+    fee_priority = exitable_at << 128 | utxo_pos
+    assert utxo_pos == expected_utxo_pos
+    assert exitable_at == expected_exitable_at
+
+    expected_utxo_pos = blknum * 1000000000 + 1
+    root_chain.startDepositExit(expected_utxo_pos, value_1)
+    utxo_pos, created_at = root_chain.getNextExit()
+    deposit_priority = created_at << 128 | utxo_pos
+    assert fee_priority > deposit_priority
+    # Fails if transaction sender isn't the authority
+    assert_tx_failed(lambda: root_chain.startFeeExit(1, sender=t.k1))
 
 
 def test_start_exit(t, root_chain, assert_tx_failed):
@@ -47,7 +74,7 @@ def test_start_exit(t, root_chain, assert_tx_failed):
     owner, value_1, key = t.a1, 100, t.k1
     null_address = b'\x00' * 20
     tx1 = Transaction(0, 0, 0, 0, 0, 0,
-                      owner, value_1, null_address, 0, 0)
+                      owner, value_1, null_address, 0)
     deposit_tx_hash = get_deposit_hash(owner, value_1)
     dep_blknum = root_chain.getDepositBlock()
     assert dep_blknum == 1
@@ -70,7 +97,7 @@ def test_start_exit(t, root_chain, assert_tx_failed):
     t.chain.revert(snapshot)
 
     tx2 = Transaction(dep_blknum, 0, 0, 0, 0, 0,
-                      owner, value_1, null_address, 0, 0)
+                      owner, value_1, null_address, 0)
     tx2.sign1(key)
     tx_bytes2 = rlp.encode(tx2, UnsignedTransaction)
     merkle = FixedMerkle(16, [tx2.merkle_hash], True)
@@ -114,7 +141,7 @@ def test_challenge_exit(t, u, root_chain, assert_tx_failed):
     owner, value_1, key = t.a1, 100, t.k1
     null_address = b'\x00' * 20
     tx1 = Transaction(0, 0, 0, 0, 0, 0,
-                      owner, value_1, null_address, 0, 0)
+                      owner, value_1, null_address, 0)
     deposit_tx_hash = get_deposit_hash(owner, value_1)
     utxo_pos1 = root_chain.getDepositBlock() * 1000000000 + 1
     root_chain.deposit(value=value_1, sender=key)
@@ -126,7 +153,7 @@ def test_challenge_exit(t, u, root_chain, assert_tx_failed):
     sigs = tx1.sig1 + tx1.sig2 + confirmSig1
     root_chain.startDepositExit(utxo_pos1, tx1.amount1, sender=key)
     tx3 = Transaction(utxo_pos2, 0, 0, 0, 0, 0,
-                      owner, value_1, null_address, 0, 0)
+                      owner, value_1, null_address, 0)
     tx3.sign1(key)
     tx_bytes3 = rlp.encode(tx3, UnsignedTransaction)
     merkle = FixedMerkle(16, [tx3.merkle_hash], True)
@@ -137,7 +164,7 @@ def test_challenge_exit(t, u, root_chain, assert_tx_failed):
     sigs = tx3.sig1 + tx3.sig2
     utxo_pos3 = child_blknum * 1000000000 + 10000 * 0 + 0
     tx4 = Transaction(utxo_pos1, 0, 0, 0, 0, 0,
-                      owner, value_1, null_address, 0, 0)
+                      owner, value_1, null_address, 0)
     tx4.sign1(key)
     tx_bytes4 = rlp.encode(tx4, UnsignedTransaction)
     merkle = FixedMerkle(16, [tx4.merkle_hash], True)
@@ -164,7 +191,7 @@ def test_finalize_exits(t, u, root_chain):
     owner, value_1, key = t.a1, 100, t.k1
     null_address = b'\x00' * 20
     tx1 = Transaction(0, 0, 0, 0, 0, 0,
-                      owner, value_1, null_address, 0, 0)
+                      owner, value_1, null_address, 0)
     dep1_blknum = root_chain.getDepositBlock()
     root_chain.deposit(value=value_1, sender=key)
     utxo_pos1 = dep1_blknum * 1000000000 + 10000 * 0 + 1

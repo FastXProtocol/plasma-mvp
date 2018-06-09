@@ -2,10 +2,12 @@ pragma solidity 0.4.18;
 
 import 'SafeMath.sol';
 import 'Math.sol';
-import 'RLP.sol';
+import 'PlasmaRLP.sol';
 import 'Merkle.sol';
 import 'Validate.sol';
 import 'PriorityQueue.sol';
+import 'ERC20.sol';
+import 'ERC721Basic.sol';
 
 
 /**
@@ -15,16 +17,14 @@ import 'PriorityQueue.sol';
 
 contract RootChain {
     using SafeMath for uint256;
-    using RLP for bytes;
-    using RLP for RLP.RLPItem;
-    using RLP for RLP.Iterator;
     using Merkle for bytes32;
+    using PlasmaRLP for bytes;
 
     /*
      * Events
      */
-    event Deposit(address depositor, uint256 amount, uint256 depositBlock);
-    event Exit(address exitor, uint256 utxoPos);
+    event Deposit(address depositor, address contractAddress, uint256 amount, uint256 tokenId, uint256 depositBlock);
+    event ExitStarted(address exitor, uint256 utxoPos,uint256 amount);
 
     /*
      *  Storage
@@ -42,6 +42,7 @@ contract RootChain {
     uint256 public currentChildBlock; /* ends with 000 */
     uint256 public currentDepositBlock; /* takes values in range 1..999 */
     uint256 public childBlockInterval;
+    uint256 public currentFeeExit;
 
     struct exit {
         address owner;
@@ -72,15 +73,17 @@ contract RootChain {
         childBlockInterval = 1000;
         currentChildBlock = childBlockInterval;
         currentDepositBlock = 1;
+        currentFeeExit = 1;
         exitsQueue = new PriorityQueue();
     }
 
     // @dev Allows Plasma chain operator to submit block root
     // @param root The root of a child chain block
-    function submitBlock(bytes32 root)
+    function submitBlock(bytes32 root, uint256 expireTimestamp)
         public
         isAuthority
     {
+        require(expireTimestamp == 0 || block.timestamp < expireTimestamp);
         childChain[currentChildBlock] = childBlock({
             root: root,
             created_at: block.timestamp
@@ -88,34 +91,67 @@ contract RootChain {
         currentChildBlock = currentChildBlock.add(childBlockInterval);
         currentDepositBlock = 1;
     }
+    
+    function getRoot(address contractAddress, uint256 amount, uint256 tokenId) private returns(bytes32 root){
+        if(contractAddress == address(0)){
+            require(amount == msg.value);
+            require(tokenId == 0);
+            root = keccak256(msg.sender, contractAddress, msg.value, 0);
+        }else if(amount == 0){
+            require(contractAddress != 0);
+            require(tokenId != 0);
+            ERC721Basic erc721Contract = ERC721Basic(contractAddress);
+            require(erc721Contract.ownerOf(tokenId) != address(this));
+            erc721Contract.transferFrom(msg.sender, address(this), tokenId);
+            require(erc721Contract.ownerOf(tokenId) == address(this));
+            root = keccak256(msg.sender, contractAddress, 0, tokenId);
+        }else{
+            require(contractAddress != 0);
+            require(tokenId == 0);
+            ERC20 erc20Contract = ERC20(contractAddress);
+            uint256 originAmount = erc20Contract.balanceOf(address(this));
+            erc20Contract.transferFrom(msg.sender, address(this), amount);
+            require(erc20Contract.balanceOf(address(this)) - originAmount == amount);
+            root = keccak256(msg.sender, contractAddress, amount, 0);
+        }
+    }
 
     // @dev Allows anyone to deposit funds into the Plasma chain
     // @param txBytes The format of the transaction that'll become the deposit
-    function deposit()
+    function deposit(address contractAddress, uint256 amount, uint256 tokenId)
         public
         payable
     {
         require(currentDepositBlock < childBlockInterval);
-        bytes32 root = keccak256(msg.sender, msg.value);
+        bytes32 root = getRoot(contractAddress, amount, tokenId);
         uint256 depositBlock = getDepositBlock();
         childChain[depositBlock] = childBlock({
             root: root,
             created_at: block.timestamp
         });
         currentDepositBlock = currentDepositBlock.add(1);
-        Deposit(msg.sender, msg.value, depositBlock);
+        Deposit(msg.sender, contractAddress, amount, tokenId, depositBlock);
     }
 
     function startDepositExit(uint256 depositPos, uint256 amount)
         public
     {
-        uint256 blknum = depositPos % 1000000000;
+        uint256 blknum = depositPos / 1000000000;
         // Makes sure that deposit position is actually a deposit
         require(blknum % childBlockInterval != 0);
         bytes32 root = childChain[blknum].root;
         bytes32 depositHash = keccak256(msg.sender, amount);
         require(root == depositHash);
-        addExitToQueue(depositPos, msg.sender, amount);
+        addExitToQueue(depositPos, msg.sender, amount, childChain[blknum].created_at);
+    }
+
+    function startFeeExit(uint256 amount)
+        public
+        isAuthority
+        returns (uint256)
+    {
+        addExitToQueue(currentFeeExit, msg.sender, amount, block.timestamp + 1);
+        currentFeeExit = currentFeeExit.add(1);
     }
 
     // @dev Starts to exit a specified utxo
@@ -126,29 +162,26 @@ contract RootChain {
     function startExit(uint256 utxoPos, bytes txBytes, bytes proof, bytes sigs)
         public
     {
-        var txList = txBytes.toRLPItem().toList(11);
-        uint256 amount = txList[7 + 2 * oindex].toUint();
         uint256 blknum = utxoPos / 1000000000;
         uint256 txindex = (utxoPos % 1000000000) / 10000;
-        uint256 oindex = utxoPos - blknum * 1000000000 - txindex * 10000;
-        address exitor = txList[6 + 2 * oindex].toAddress();
-        require(msg.sender == exitor);
-        bytes32 root = childChain[blknum].root;
+        uint256 oindex = utxoPos - blknum * 1000000000 - txindex * 10000; 
+        var exitingTx = txBytes.createExitingTx(11, oindex);
+        
+        require(msg.sender == exitingTx.exitor);
+        bytes32 root = childChain[blknum].root; 
         bytes32 merkleHash = keccak256(keccak256(txBytes), ByteUtils.slice(sigs, 0, 130));
-        require(Validate.checkSigs(keccak256(txBytes), root, txList[0].toUint(), txList[3].toUint(), sigs));
+        require(Validate.checkSigs(keccak256(txBytes), root, exitingTx.inputCount, sigs));
         require(merkleHash.checkMembership(txindex, root, proof));
-        addExitToQueue(utxoPos, exitor, amount);
+        addExitToQueue(utxoPos, exitingTx.exitor, exitingTx.amount, childChain[blknum].created_at);
     }
 
     // Priority is a given utxos position in the exit priority queue
-    function addExitToQueue(uint256 utxoPos, address exitor, uint256 amount)
+    function addExitToQueue(uint256 utxoPos, address exitor, uint256 amount, uint256 created_at)
         private
     {
         uint256 blknum = utxoPos / 1000000000;
-        uint256 txindex = (utxoPos % 1000000000) / 10000;
-        uint256 oindex = utxoPos - blknum * 1000000000 - txindex * 10000;
-        uint256 priority = Math.max(childChain[blknum].created_at, block.timestamp - 1 weeks);
-        priority = priority << 128 | utxoPos;
+        uint256 exitable_at = Math.max(created_at + 2 weeks, block.timestamp + 1 weeks);
+        uint256 priority = exitable_at << 128 | utxoPos;
         require(amount > 0);
         require(exits[utxoPos].amount == 0);
         exitsQueue.insert(priority);
@@ -156,7 +189,7 @@ contract RootChain {
             owner: exitor,
             amount: amount
         });
-        Exit(exitor, utxoPos);
+        ExitStarted(msg.sender, utxoPos, amount);
     }
 
     // @dev Allows anyone to challenge an exiting transaction by submitting proof of a double spend on the child chain
@@ -169,7 +202,7 @@ contract RootChain {
     function challengeExit(uint256 cUtxoPos, uint256 eUtxoIndex, bytes txBytes, bytes proof, bytes sigs, bytes confirmationSig)
         public
     {
-        uint256 eUtxoPos = getUtxoPos(txBytes, eUtxoIndex);
+        uint256 eUtxoPos = txBytes.getUtxoPos(11, eUtxoIndex);
         uint256 txindex = (cUtxoPos % 1000000000) / 10000;
         bytes32 root = childChain[cUtxoPos / 1000000000].root;
         var txHash = keccak256(txBytes);
@@ -188,17 +221,21 @@ contract RootChain {
     function finalizeExits()
         public
     {
-        uint256 twoWeekOldTimestamp = block.timestamp.sub(2 weeks);
         uint256 utxoPos;
-        uint256 created_at;
-        (utxoPos, created_at) = getNextExit();
+        uint256 exitable_at;
+        (utxoPos, exitable_at) = getNextExit();
         exit memory currentExit = exits[utxoPos];
-        while (created_at < twoWeekOldTimestamp && exitsQueue.currentSize() > 0) {
+        while (exitable_at < block.timestamp && exitsQueue.currentSize() > 0) {
             currentExit = exits[utxoPos];
             currentExit.owner.transfer(currentExit.amount);
             exitsQueue.delMin();
             delete exits[utxoPos].owner;
-            (utxoPos, created_at) = getNextExit();
+
+            if (exitsQueue.currentSize() > 0) {
+                (utxoPos, exitable_at) = getNextExit();
+            } else {
+                return;
+            }
         }
     }
 
@@ -229,15 +266,6 @@ contract RootChain {
         return (exits[utxoPos].owner, exits[utxoPos].amount);
     }
 
-    function getUtxoPos(bytes txBytes, uint256 oIndex)
-        public
-        returns (uint256)
-    {
-        var txList = txBytes.toRLPItem().toList(11);
-        uint256 oIndexShift = oIndex * 3;
-        return txList[0 + oIndexShift].toUint() + txList[1 + oIndexShift].toUint() + txList[2 + oIndexShift].toUint();
-    }
-
     function getNextExit()
         public
         view
@@ -245,7 +273,7 @@ contract RootChain {
     {
         uint256 priority = exitsQueue.getMin();
         uint256 utxoPos = uint256(uint128(priority));
-        uint256 created_at = priority >> 128;
-        return (utxoPos, created_at);
+        uint256 exitable_at = priority >> 128;
+        return (utxoPos, exitable_at);
     }
 }
