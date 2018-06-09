@@ -27,6 +27,9 @@ const client = new Client(options);
 const ownerAddress = options.defaultAccount;
 const receiverAddress = process.env.ENV == "LOCAL"? "0x4B3eC6c9dC67079E82152d6D55d8dd96a8e6AA26": "0xd103C64735B324161518F17CeF15D1E27e0b9F3E";
 
+const erc20ContractAddress = "0x395B650707cAA0d300615bBa2901398DFf64CF7c";
+const erc721ContractAddress = "0xd641205E8F36A858c5867945782C917E3F63d1e8";
+
 const logBalance = async (address) => {
     let res = (await client.getBalance(address)).data.result;
     console.log("address: "+ (address || client.defaultAccount) );
@@ -48,7 +51,7 @@ const sleep = async (millisecond) => {
 
 const testTx = async () => {
     console.log("---------- testing transaction ----------");
-    await client.deposit("0x0", 0, 100);
+    await client.deposit("0x0", 100, 0);
     await logBalance();
 
     await client.sendEth(receiverAddress, 150);
@@ -62,7 +65,7 @@ const testPsTx = async () => {
     console.log("---------- testing partially signed transaction ----------");
     console.log("1. ps tranctions", await getPsTx());
 
-    await client.sellToken("0x0", 0, 1);
+    await client.sellToken("0x0", 1, 0);
 
     await logBalance();
 
@@ -81,11 +84,20 @@ const testPsTx = async () => {
 
 }
 
+const testApprove = async () => {
+    await client.approve(erc20ContractAddress, 100, 0);
+    await logBalance();
+    await sleep(1000)
+    await client.deposit(erc20ContractAddress, 100, 0);
+    await logBalance();
+}
+
 
 const main = async () => {
     try{
 //         await testTx();
         await testPsTx();
+//         await testApprove();
     } catch(e) {
         console.log(e);
     }
