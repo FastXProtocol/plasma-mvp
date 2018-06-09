@@ -32,6 +32,9 @@ const fastx = new Client(options);
 const ownerAddress = options.defaultAccount;
 const receiverAddress = process.env.ENV == "LOCAL"? "0x4B3eC6c9dC67079E82152d6D55d8dd96a8e6AA26": "0xd103C64735B324161518F17CeF15D1E27e0b9F3E";
 
+const erc20ContractAddress = "0x395B650707cAA0d300615bBa2901398DFf64CF7c";
+const erc721ContractAddress = "0xd641205E8F36A858c5867945782C917E3F63d1e8";
+
 const logBalance = async (address) => {
     let res = (await fastx.getBalance(address)).data.result;
     console.log("\naddress: "+ (address || fastx.defaultAccount) );
@@ -53,7 +56,7 @@ const sleep = async (millisecond) => {
 
 const testTx = async () => {
     console.log("---------- testing transaction ----------");
-    await fastx.deposit("0x0", 0, 100);
+    await fastx.deposit("0x0", 100, 0);
     await logBalance();
 
     await fastx.sendEth(receiverAddress, 150);
