@@ -70,6 +70,17 @@ class PartiallySignedTransactionPool(object):
     def is_same_transaction(self, transaction1, transaction2):
         return transaction1.hash1 == transaction2.hash1 or transaction1.hash2 == transaction2.hash2
     
+    def utxo_spent(self, blknum, txindex, oindex):
+        self.clear_expired_ps_transactions()
+        self.ps_transactions = list(filter(
+            lambda x: not (
+                (x.blknum1 == blknum and x.txindex1 == txindex and x.oindex1 == oindex) or \
+                (x.blknum2 == blknum and x.txindex2 == txindex and x.oindex2 == oindex)
+            ), self.ps_transactions
+        ))
+        
+        self.save()
+    
     def remove_ps_transaction(self, transaction):
         self.clear_expired_ps_transactions()
         self.ps_transactions = list(filter(lambda x: not self.is_same_transaction(transaction, x), self.ps_transactions))
