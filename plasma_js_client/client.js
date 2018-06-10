@@ -134,13 +134,13 @@ class Client {
                 ", tokenid: " + tokenid +
                 ", account: " + account);
         let tokenInterface = null;
-        if (this.tokenid != 0) {
+        if (tokenid != 0) {
             tokenInterface = this.getErc721Interface(contractAddress);
         } else {
             tokenInterface = this.getErc20Interface(contractAddress);
         }
         return tokenInterface.methods.approve(
-                this.rootChainAddress, this.tokenid != 0? tokenid: amount
+                this.rootChainAddress, tokenid != 0? tokenid: amount
             ).send(
                 {from: account, value: 0}
             ).on('transactionHash',
