@@ -32,6 +32,10 @@ def deploy():
     deployer.compile_all()
     erc721_contract = deployer.deploy_contract("ERC721Token", args=("My ERC721 Token", "MET721"))
     erc20_contract = deployer.deploy_contract("EIP20", args=(100000000 * (10 ** 18), "GOLD", 18, "GOLD"))
+    print("minting erc721 ...")
+    erc721_contract.mint(plasma_config["COINBASE"], 1, transact={'from': plasma_config["COINBASE"]})
+    erc721_contract.mint(plasma_config["COINBASE"], 888, transact={'from': plasma_config["COINBASE"]})
+    print("erc721 initialized")
 
 
 if __name__ == '__main__':

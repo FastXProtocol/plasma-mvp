@@ -70,7 +70,7 @@ const testPsTx = async () => {
     console.log("---------- testing partially signed transaction ----------");
     console.log("1. ps tranctions", await getPsTx());
 
-    await fastx.sellToken("0x0", 0, 1);
+    await fastx.sellToken("0x0", 1, 0);
 
     await logBalance();
 
@@ -222,15 +222,29 @@ const bidAd = async () => {
     }
 }
 
+
+const testApprove = async () => {
+    await fastx.approve(erc20ContractAddress, 100, 0);
+    await logBalance();
+    await fastx.deposit(erc20ContractAddress, 100, 0);
+    await sleep(1000);
+    await logBalance();
+    
+    await fastx.approve(erc721ContractAddress, 0, 888);
+    await logBalance();
+    await fastx.deposit(erc721ContractAddress, 0, 888);
+    await sleep(1000);
+    await logBalance();
+}
+
+
 const main = async () => {
-
     try {
-        // await testTx();
-        // await testPsTx();
-
-        // await postAd();
-        await bidAd();
-
+//         await testTx();
+//         await testPsTx();
+//         await postAd();
+//         await bidAd();
+        await testApprove();
     } catch(e) {
         console.log(e);
         process.exit();
