@@ -20,7 +20,7 @@ if (process.env.ENV == "LOCAL") {
 } else {
     options = {
         ...options,
-        gethRpc: "http://localhost:8545",
+        gethRpc: "http://192.168.1.100:8545",
         fastXRpc: "http://dev2.msan.cn:8546/jsonrpc",
         rootChainAddress: "0xD9FA1cbB70b74f3Ef259CE0eb48029F02eE0FcD1",
         defaultAccount: "0xfc32e7c7c55391ebb4f91187c91418bf96860ca9",
@@ -43,7 +43,7 @@ const logBalance = async (address) => {
 
 
 const getUTXOs = async (address) => {
-    return (await fastx.getUTXO(address)).data.result;
+    return (await fastx.getAllUTXO(address)).data.result;
 };
 
 const getPsTx = async () => {
@@ -100,7 +100,7 @@ const depositNFT = async () => {
 
     // Create a new token
     await nft_contract.methods.mint(ownerAddress, tokenid)
-        .send({from: ownerAddress, gas: 2873385})
+        .send({from: ownerAddress, gas: 3873385})
         .on('transactionHash', console.log);
 
     // Approve the token to be able to transfer to the FastX contract
@@ -111,7 +111,7 @@ const depositNFT = async () => {
     console.log( 'New owner address: ', await nft_contract.methods.ownerOf(tokenid).call() );
 
     // deposit to the FastX chain
-    await fastx.deposit(nftContract, tokenid, 0);
+    await fastx.deposit(nftContract, 0, tokenid);
     return {
         category: nftContract, 
         tokenId: tokenid
@@ -121,61 +121,22 @@ const depositNFT = async () => {
 const postNftAd = async(contract, tokenid, end, price, options={}) => {
     let from = options.from || fastx.defaultAccount;
     let categoryContract = normalizeAddress(contract).toString('hex');
-    console.log('from: '+from + ', contract: '+categoryContract+', tokenid: '+tokenid);
+    console.log('\nCreate PS TX from: '+from + ', contract: '+categoryContract+', tokenid: '+tokenid);
 
-    let utxos = (await fastx.getUTXO(from)).data.result;
+    let utxo = await fastx.searchUTXO({
+        category: categoryContract, 
+        tokenId: tokenid,
+    }, { from: from });
+    console.log('\nUTXO',utxo);
+    const [_blknum, _txindex, _oindex, _contract, _balance, _tokenid] = utxo;
 
-    let utxo;
-    for(let i in utxos){
-        utxo = utxos[utxos.length - i - 1];
-        const [_blknum, _txindex, _oindex, _contract, _balance, _tokenid] = utxo;
-        if ( categoryContract == _contract && tokenid == _tokenid ) {
-            console.log(_blknum, _txindex, _oindex, _contract, _balance, _tokenid);
-
-            return fastx.sendPsTransaction(
-                _blknum, _txindex, _oindex, 
-                from, '0'.repeat(40), price, 0, // sell for the price in eth
-                _contract, 0, _tokenid, // sell the token
-                0, end
-            );
-        }
-    }
-}
-
-const fillNftAd = async() => {
-
-}
-
-const getUTXO = async (search={}, options={}) => {
-    let from = options.from || fastx.defaultAccount;
-    if (search['category'])
-        search['category'] = normalizeAddress(search['category']).toString('hex');
-
-    let utxos = (await fastx.getUTXO(from)).data.result;
-    let utxo, utxoObj={};
-    for(let i in utxos){
-        utxo = utxos[utxos.length - i - 1];
-        const [_blknum, _txindex, _oindex, _contract, _balance, _tokenid] = utxo;
-        utxoObj['category'] = _contract;
-        utxoObj['tokenId'] = _tokenid;
-        utxoObj['amount'] = _balance;
-
-        let found = false;
-        Object.keys(search).every( (key, i) => {
-            // console.log(key);
-            // console.log(search[key]);
-            // console.log(utxoObj[key]);
-            if (search[key] == utxoObj[key])
-                return found = true;
-            else
-                return found = false;
-        });
-        if ( found ) {
-            // console.log(_blknum, _txindex, _oindex, _contract, _balance, _tokenid);
-            return utxo;
-        }                
-    }
-}
+    return fastx.sendPsTransaction(
+        _blknum, _txindex, _oindex, 
+        from, '0'.repeat(40), price, 0, // sell for the price in eth
+        _contract, 0, _tokenid, // sell the token
+        0, end
+    );
+};
 
 const postAd = async() => {
     const nft_ad = await depositNFT();
@@ -185,7 +146,7 @@ const postAd = async() => {
     const end = moment().add(1, 'days').unix();
     const price = 1;
 
-    console.log( 'Category: '+nft_ad.category+', Token Id: '+nft_ad.tokenId+', end: '+end+', price: '+price);
+    console.log( 'Posting Ad for Category: '+nft_ad.category+', Token Id: '+nft_ad.tokenId+', end: '+end+', price: '+price);
 
     await postNftAd(nft_ad.category, nft_ad.tokenId, end, price);
 }
@@ -205,7 +166,7 @@ const bidAd = async () => {
         console.log('\nFilling tx ...\n');
         console.log(fillTx);
         
-        let utxo = await getUTXO({
+        let utxo = await fastx.searchUTXO({
                 category: fillTx.contractaddress1, 
                 tokenId: fillTx.tokenid1, 
                 amount: fillTx.amount1
@@ -230,9 +191,9 @@ const testApprove = async () => {
     await sleep(1000);
     await logBalance();
     
-    await fastx.approve(erc721ContractAddress, 0, 888);
+    await fastx.approve(erc721ContractAddress, 0, 891);
     await logBalance();
-    await fastx.deposit(erc721ContractAddress, 0, 888);
+    await fastx.deposit(erc721ContractAddress, 0, 891);
     await sleep(1000);
     await logBalance();
 }
@@ -242,8 +203,8 @@ const main = async () => {
     try {
 //         await testTx();
 //         await testPsTx();
-//         await postAd();
-//         await bidAd();
+        // await postAd();
+        // await bidAd();
         await testApprove();
     } catch(e) {
         console.log(e);
