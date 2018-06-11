@@ -79,8 +79,8 @@ class Client {
      * Deposit assets to the FastX chain.
      * @method
      * @param {string} contractAddress - the smart contract address for the depositing asset.
-     * @param {number} tokenid - token id for the asset, 0 if not applicable.
      * @param {string} amount - the depositing amount.
+     * @param {number} tokenid - token id for the asset, 0 if not applicable.
      * @param {Object} options - including from: the asset owner's address.
      */
     deposit (contractAddress, amount, tokenid, options={}) {
@@ -95,7 +95,7 @@ class Client {
                 ", tokenid: " + tokenid +
                 ", account: " + account);
 
-        let transact = {from: account, gas: 2873385};
+        let transact = {from: account, gas: 3894132};
         let aContract = normalizeAddress(contractAddress);
         if ('0'.repeat(40) == aContract.toString('hex')) {
             transact.value = amount;
@@ -155,9 +155,42 @@ class Client {
         return this.makeChildChainRpcRequest("get_balance", [address, block]);
     };
 
-    getUTXO (address, block="latest") {
+    getAllUTXO (address, block="latest") {
         if (!address && this.defaultAccount) address = this.defaultAccount;
         return this.makeChildChainRpcRequest("get_utxo", [address, block]);
+    };
+
+    async searchUTXO (search={}, options={}) {
+        let from = options.from || this.defaultAccount;
+        if (search['category'])
+            search['category'] = normalizeAddress(search['category']).toString('hex');
+    
+        let utxos = (await this.getAllUTXO(from)).data.result;
+        let utxo, utxoObj={};
+        for(let i in utxos){
+            utxo = utxos[utxos.length - i - 1];
+            const [_blknum, _txindex, _oindex, _contract, _balance, _tokenid] = utxo;
+            utxoObj['category'] = _contract;
+            utxoObj['tokenId'] = _tokenid;
+            utxoObj['amount'] = _balance;
+    
+            let found = false;
+            Object.keys(search).every( (key, i) => {
+                // console.log(key);
+                // console.log(search[key]);
+                // console.log(utxoObj[key]);
+                if (search[key] == utxoObj[key])
+                    return found = true;
+                else
+                    return found = false;
+            });
+            if ( found ) {
+                if (this.debug) 
+                    console.log("\nSearch UTXO result: ", _blknum, _txindex, _oindex, _contract, _balance, _tokenid);
+                return utxo;
+            }                
+        }
+        return [];
     };
 
     unlockAccount(account, password, duration=1000) {
