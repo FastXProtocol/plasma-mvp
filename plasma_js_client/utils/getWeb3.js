@@ -4,7 +4,7 @@
 
 import Web3 from 'web3';
 
-
+/* eslint-disable */
 const root = (typeof self === 'object' && self.self === self && self) ||
   (typeof global === 'object' && global.global === global && global) ||
   this;
