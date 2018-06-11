@@ -3,7 +3,6 @@ import Client,{normalizeAddress} from "./client";
 import erc721_abi from "../contract_data/ERC721Token.abi.json"
 
 const rootChainAddress = "0xD9FA1cbB70b74f3Ef259CE0eb48029F02eE0FcD1";
-const nftContract = "0x952CE607bD9ab82e920510b2375cbaD234d28c8F";
 
 let options = {
     debug: true
@@ -35,24 +34,37 @@ const receiverAddress = process.env.ENV == "LOCAL"? "0x4B3eC6c9dC67079E82152d6D5
 const erc20ContractAddress = "0x395B650707cAA0d300615bBa2901398DFf64CF7c";
 const erc721ContractAddress = "0xd641205E8F36A858c5867945782C917E3F63d1e8";
 
+
+const sleep = async (millisecond) => {
+    await new Promise(resolve => setTimeout(resolve, millisecond));
+};
+
+
 const logBalance = async (address) => {
     let res = (await fastx.getBalance(address)).data.result;
     console.log("\naddress: "+ (address || fastx.defaultAccount) );
     console.log("balance: ", res);
-}
+};
 
 
 const getUTXOs = async (address) => {
     return (await fastx.getAllUTXO(address)).data.result;
 };
 
+
 const getPsTx = async () => {
     return (await fastx.getAllPsTransactions()).data.result;
-}
+};
 
-const sleep = async (millisecond) => {
-    await new Promise(resolve => setTimeout(resolve, millisecond));
-}
+
+const approveDeposit = async (contractAddress, amount, tokenId) => {
+    await logBalance();
+    await fastx.approve(contractAddress, amount, tokenId);
+    await fastx.deposit(contractAddress, amount, tokenId);
+    await sleep(1000);
+    await logBalance();
+};
+
 
 const testTx = async () => {
     console.log("---------- testing transaction ----------");
@@ -90,11 +102,9 @@ const testPsTx = async () => {
 };
 
 const depositNFT = async () => {
-
-    let nft_contract = new fastx.web3.eth.Contract( erc721_abi, nftContract);
+    let nft_contract = new fastx.web3.eth.Contract( erc721_abi, erc721ContractAddress);
     const totalSupply = await nft_contract.methods.totalSupply().call();
     const tokenid = parseInt(totalSupply) + 10;
-    console.log('tokenid: ', tokenid);
 
     console.log('Creating new token: '+tokenid);
 
@@ -104,16 +114,9 @@ const depositNFT = async () => {
         .on('transactionHash', console.log);
 
     // Approve the token to be able to transfer to the FastX contract
-    console.log('Approving transfering token # ', tokenid);
-    await nft_contract.methods.approve(rootChainAddress, tokenid)
-        .send({from: ownerAddress})
-        .on('transactionHash', console.log);
-    console.log( 'New owner address: ', await nft_contract.methods.ownerOf(tokenid).call() );
-
-    // deposit to the FastX chain
-    await fastx.deposit(nftContract, 0, tokenid);
+    await approveDeposit(erc721ContractAddress, 0, tokenid);
     return {
-        category: nftContract, 
+        category: erc721ContractAddress, 
         tokenId: tokenid
     };
 };
@@ -140,7 +143,7 @@ const postNftAd = async(contract, tokenid, end, price, options={}) => {
 
 const postAd = async() => {
     const nft_ad = await depositNFT();
-    // const nft_ad = {category: nftContract, tokenId: 20};
+    // const nft_ad = {category: erc721ContractAddress, tokenId: 20};
     await logBalance();
 
     const end = moment().add(1, 'days').unix();
@@ -152,6 +155,9 @@ const postAd = async() => {
 }
 
 const bidAd = async () => {
+    await fastx.deposit("0x0", 1, 0);
+    await sleep(1000);
+    await fastx.sendEth(receiverAddress, 1);
     await logBalance();
     await logBalance(receiverAddress);
 
@@ -185,17 +191,8 @@ const bidAd = async () => {
 
 
 const testApprove = async () => {
-    await fastx.approve(erc20ContractAddress, 100, 0);
-    await logBalance();
-    await fastx.deposit(erc20ContractAddress, 100, 0);
-    await sleep(1000);
-    await logBalance();
-    
-    await fastx.approve(erc721ContractAddress, 0, 891);
-    await logBalance();
-    await fastx.deposit(erc721ContractAddress, 0, 891);
-    await sleep(1000);
-    await logBalance();
+    await approveDeposit(erc20ContractAddress, 100, 0);
+    await approveDeposit(erc721ContractAddress, 0, 888);
 }
 
 
@@ -203,9 +200,9 @@ const main = async () => {
     try {
 //         await testTx();
 //         await testPsTx();
-        // await postAd();
-        // await bidAd();
-        await testApprove();
+//         await postAd();
+        await bidAd();
+//         await testApprove();
     } catch(e) {
         console.log(e);
         process.exit();
