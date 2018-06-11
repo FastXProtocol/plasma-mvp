@@ -422,7 +422,7 @@ class Client {
         
         let from = options.from || this.defaultAccount;
         if (this.debug) console.log('from: '+from);
-        let utxos = (await this.getUTXO(from)).data.result;
+        let utxos = (await this.getAllUTXO(from)).data.result;
         if (this.debug) console.log(utxos);
 
         let utxo, txPromise, tx_amount=0, remainder=amount;
@@ -455,7 +455,7 @@ class Client {
         contract = normalizeAddress(contract).toString('hex');
         if (this.debug) console.log('from: '+from + ', contract: '+contract+', tokenid: '+tokenid);
 
-        let utxos = (await this.getUTXO(from)).data.result;
+        let utxos = (await this.getAllUTXO(from)).data.result;
 
         let utxo, txPromise, tx_amount=0, remainder=amount;
         for(let i in utxos){
