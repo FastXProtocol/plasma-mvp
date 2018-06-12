@@ -218,17 +218,17 @@ class Client {
      * @param {number} [fee] - transacton fee.
      * @param {number} [expiretimestamp] - expiration time for the transaction.
      * @param {number} [salt] - salt.
+     * @param {string} [address1] - owner of input1.
+     * @param {string} [address2] - owner of input2.
      * @param {string} [sign1] - owner1's signature.
      * @param {string} [sign2] - owner2's signature.
-     * @param {string} [address1] - owner1's receiving address.
-     * @param {string} [address2] - owner2's receiving address.
      */
     async sendTransaction (blknum1, txindex1, oindex1,
            blknum2, txindex2, oindex2,
            newowner1, contractaddress1, amount1, tokenid1,
            newowner2, contractaddress2, amount2, tokenid2,
            fee=0, expiretimestamp=null, salt=null,
-           sign1=null, sign2=null, address1=null, address2=null
+           address1=null, address2=null, sign1=null, sign2=null
     ) {
         if (!root.process){
             if (sign1 == null && address1 == null){
@@ -272,9 +272,9 @@ class Client {
                    byteNewowner2, contractaddress2, amount2, tokenid2,
                    fee, expiretimestamp, salt]);
                 // if (this.debug) console.log('Hash2: '+hash2);
-                sign2 = await this.sign(hash2,newowner2);
+                sign2 = await this.sign(hash2, address2);
             }
-            // if (this.debug) console.log('Sign2: '+sign2);
+            if (this.debug) console.log('Sign2: '+sign2);
             return afterSign2(sign1, sign2);
         }
         
@@ -284,7 +284,7 @@ class Client {
                contractaddress2, amount2, tokenid2,
                fee, expiretimestamp, salt]);
             // if (this.debug) console.log('Hash1: '+hash1);
-            sign1 = await this.sign(hash1,newowner1);
+            sign1 = await this.sign(hash1, address1);
         } 
         // if (this.debug) console.log('Sign1: '+sign1)
         return afterSign1(sign1);
@@ -306,15 +306,21 @@ class Client {
      * @param {number} [fee] - transacton fee.
      * @param {number} [expiretimestamp] - expiration time for the transaction.
      * @param {number} [salt] - salt.
-     * @param {string} [sign1] - owner1's signature.
+     * @param {string} [sign1] - input1's signature.
+     * @param {string} [address1] - owner of input1.
      */
     async sendPsTransaction (
             blknum1, txindex1, oindex1,
             newowner1, contractaddress1, amount1, tokenid1,
             contractaddress2, amount2, tokenid2,
             fee=0, expiretimestamp=null, salt=null,
-            sign1=null
+            address1=null, sign1=null
     ) {
+        if (!root.process){
+            if (sign1 == null && address1 == null){
+                throw new Error("sign1 and address1 can not both be none");
+            }
+        }
         if (expiretimestamp == null){
             expiretimestamp = Math.ceil(Date.now() / 1000) + 3600;
         }
@@ -348,7 +354,7 @@ class Client {
                 contractaddress2, amount2, tokenid2,
                 fee, expiretimestamp, salt]);
             if (this.debug) console.log('Hash1: ',hash1);
-            sign1 = await this.sign(hash1,newowner1);
+            sign1 = await this.sign(hash1, address1);
         } 
         if (this.debug) console.log('Sign1: '+sign1)
         return afterSign1(sign1);       
@@ -362,13 +368,13 @@ class Client {
      * @param {number} txindex2 - transaction number in that block for input 2.
      * @param {number} oindex2 - output number of that transaction for input 2.
      * @param {string} newowner2 - owner of output 2.
-     * @param {string} [sign2] - owner2's signature.
-     * @param {string} [address2] - owner2's receiving address.
+     * @param {string} [address2] - owner of input2.
+     * @param {string} [sign2] - input2's signature.
      */
     sendPsTransactionFill (psTransaction,
            blknum2, txindex2, oindex2,
-           newowner2,
-           sign2=null, address2=null
+           newowner2, 
+           address2=null, sign2=null
     ) {
         if (!root.process){
             if (sign2 == null && address2 == null){
@@ -397,7 +403,7 @@ class Client {
            newowner1, contractaddress1, amount1, tokenid1,
            newowner2, contractaddress2, amount2, tokenid2,
            fee, expiretimestamp, salt,
-           sign1, sign2, null, address2);
+           null, address2, sign1, sign2);
     };
 
     /**

@@ -32,7 +32,7 @@ const ownerAddress = options.defaultAccount;
 const receiverAddress = process.env.ENV == "LOCAL"? "0x4B3eC6c9dC67079E82152d6D55d8dd96a8e6AA26": "0xd103C64735B324161518F17CeF15D1E27e0b9F3E";
 
 const erc20ContractAddress = "0x395B650707cAA0d300615bBa2901398DFf64CF7c";
-const erc721ContractAddress = "0xd641205E8F36A858c5867945782C917E3F63d1e8";
+const erc721ContractAddress = "0x952CE607bD9ab82e920510b2375cbaD234d28c8F";
 
 
 const sleep = async (millisecond) => {
@@ -61,7 +61,6 @@ const approveDeposit = async (contractAddress, amount, tokenId) => {
     await logBalance();
     await fastx.approve(contractAddress, amount, tokenId);
     await fastx.deposit(contractAddress, amount, tokenId);
-    await sleep(1000);
     await logBalance();
 };
 
@@ -131,19 +130,22 @@ const postNftAd = async(contract, tokenid, end, price, options={}) => {
         tokenId: tokenid,
     }, { from: from });
     console.log('\nUTXO',utxo);
+    if (utxo.length == 0)
+        throw Error('\nUTXO not found');
+
     const [_blknum, _txindex, _oindex, _contract, _balance, _tokenid] = utxo;
 
     return fastx.sendPsTransaction(
         _blknum, _txindex, _oindex, 
         from, '0'.repeat(40), price, 0, // sell for the price in eth
         _contract, 0, _tokenid, // sell the token
-        0, end
+        0, end, null, from
     );
 };
 
 const postAd = async() => {
     const nft_ad = await depositNFT();
-    // const nft_ad = {category: erc721ContractAddress, tokenId: 20};
+    // const nft_ad = {category: erc721ContractAddress, tokenId: 51};
     await logBalance();
 
     const end = moment().add(1, 'days').unix();
@@ -155,31 +157,34 @@ const postAd = async() => {
 }
 
 const bidAd = async () => {
-    await fastx.deposit("0x0", 1, 0);
-    await sleep(1000);
-    await fastx.sendEth(receiverAddress, 1);
-    await logBalance();
-    await logBalance(receiverAddress);
+    // await fastx.deposit("0x0", 1, 0);
+    // await sleep(1000);
+    // await fastx.sendEth(receiverAddress, 1);
+    // await logBalance();
+    // await logBalance(receiverAddress);
 
     let psTransactions = (await fastx.getAllPsTransactions()).data.result;
 
     console.log('\nPs Txns:\n');
     console.log(psTransactions);
 
-    let fillTx = psTransactions[0];
+    if (psTransactions.length == 0)
+        throw Error('\nNo PS Tx need to be filled...');
 
-    if (fillTx) {
+    let ad = psTransactions[ psTransactions.length-1 ];
+
+    if (ad) {
         console.log('\nFilling tx ...\n');
-        console.log(fillTx);
+        console.log(ad);
         
         let utxo = await fastx.searchUTXO({
-                category: fillTx.contractaddress1, 
-                tokenId: fillTx.tokenid1, 
-                amount: fillTx.amount1
+                category: ad.contractaddress1, 
+                tokenId: ad.tokenid1, 
+                amount: ad.amount1
             }, { from: receiverAddress });
         console.log('\nUTXO',utxo);
         const [_blknum, _txindex, _oindex, _contract, _balance, _tokenid] = utxo;
-        await fastx.sendPsTransactionFill(fillTx, _blknum, _txindex, _oindex, receiverAddress);
+        await fastx.sendPsTransactionFill(ad, _blknum, _txindex, _oindex, receiverAddress, receiverAddress);
         
         console.log('\nPs Txns:\n');
         console.log((await fastx.getAllPsTransactions()).data.result);
@@ -200,8 +205,8 @@ const main = async () => {
     try {
 //         await testTx();
 //         await testPsTx();
-//         await postAd();
-        await bidAd();
+        await postAd();
+        // await bidAd();
 //         await testApprove();
     } catch(e) {
         console.log(e);
