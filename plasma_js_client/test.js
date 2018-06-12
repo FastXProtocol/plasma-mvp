@@ -154,9 +154,8 @@ const postAd = async() => {
     console.log( 'Posting Ad for Category: '+nft_ad.category+', Token Id: '+nft_ad.tokenId+', end: '+end+', price: '+price);
 
     await postNftAd(nft_ad.category, nft_ad.tokenId, end, price);
-}
 
-const bidAd = async () => {
+    // give receiver address eth to bid
     if (process.env.ENV == "LOCAL") {
         await fastx.deposit("0x0", 1, 0);
         await sleep(1000);
@@ -164,7 +163,9 @@ const bidAd = async () => {
         await logBalance();
         await logBalance(receiverAddress);
     }
+}
 
+const bidAd = async () => {
     let psTransactions = (await fastx.getAllPsTransactions()).data.result;
 
     console.log('\nPs Txns:\n');

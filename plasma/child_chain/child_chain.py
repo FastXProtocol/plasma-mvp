@@ -9,7 +9,8 @@ from .block import Block
 from .exceptions import (InvalidBlockMerkleException,
                          InvalidBlockSignatureException,
                          InvalidTxSignatureException, TxAlreadySpentException,
-                         TxAmountMismatchException, InvalidTxOutputsException)
+                         TxAmountMismatchException, InvalidTxOutputsException,
+                         InvalidTxInputsException, )
 from .transaction import Transaction
 
 PICKLE_DIR = "child_chain_pickle"
@@ -121,6 +122,9 @@ class ChildChain(object):
         if tx.sig1 == b'\x00' * 65 or tx.sig2 == b'\x00' * 65:
             raise InvalidTxSignatureException('failed to validate tx')
         
+        if (tx.blknum1, tx.txindex1, tx.oindex1) == (tx.blknum2, tx.txindex2, tx.oindex2):
+            raise InvalidTxInputsException('failed to validate tx')
+        
         self.validate_outputs(tx.contractaddress1, tx.amount1, tx.tokenid1)
         self.validate_outputs(tx.contractaddress2, tx.amount2, tx.tokenid2)
         
@@ -147,22 +151,25 @@ class ChildChain(object):
         input_amounts = defaultdict(int)
         input_nfts = []
 
-        for (blknum, txindex, oindex) in inputs:
+        for i, (blknum, txindex, oindex) in enumerate(inputs):
             # Assume empty inputs and are valid
             if blknum == 0:
                 continue
             
+            curSign = getattr(tx, "sign" + str(i + 1))
+            curSender = getattr(tx, "sender" + str(i + 1))
+            
             transaction = self.blocks[blknum].transaction_set[txindex]
 
             if oindex == 0:
-                valid_signature = tx.sig1 != b'\x00' * 65 and transaction.newowner1 == tx.sender1
+                valid_signature = curSign != b'\x00' * 65 and transaction.newowner1 == curSender
                 spent = transaction.spent1
                 if transaction.amount1 != 0:
                     input_amounts[transaction.contractaddress1] += transaction.amount1
                 if transaction.tokenid1 != 0:
                     input_nfts.append((transaction.contractaddress1, transaction.tokenid1))
             else:
-                valid_signature = tx.sig2 != b'\x00' * 65 and transaction.newowner2 == tx.sender2
+                valid_signature = curSign != b'\x00' * 65 and transaction.newowner2 == curSender
                 spent = transaction.spent2
                 if transaction.amount2 != 0:
                     input_amounts[transaction.contractaddress2] += transaction.amount2
