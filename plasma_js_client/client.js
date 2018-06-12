@@ -13,6 +13,7 @@ export const root = (typeof self === 'object' && self.self === self && self) ||
   this;
 
 export function normalizeAddress (address) {
+    console.log(address);
     if (!address) {
         throw new Error();
     }
@@ -245,14 +246,14 @@ class Client {
             salt = Math.floor(Math.random() * 1000000000000);
         }
         contractaddress1 = normalizeAddress(contractaddress1);
-        newowner1 = normalizeAddress(newowner1);
+        const byteNewowner1 = normalizeAddress(newowner1);
         contractaddress2 = normalizeAddress(contractaddress2);
-        newowner2 = normalizeAddress(newowner2);
+        const byteNewowner2 = normalizeAddress(newowner2);
         
         let txRaw = [blknum1, txindex1, oindex1,
            blknum2, txindex2, oindex2,
-           newowner1, contractaddress1, amount1, tokenid1,
-           newowner2, contractaddress2, amount2, tokenid2,
+           byteNewowner1, contractaddress1, amount1, tokenid1,
+           byteNewowner2, contractaddress2, amount2, tokenid2,
            fee, expiretimestamp, salt];
         
         let afterSign2 = (sign1, sign2) => {
@@ -269,10 +270,10 @@ class Client {
             if (sign2 == null) {
                 let hash2 = this.hashTransaction([blknum2, txindex2, oindex2,
                    contractaddress1, amount1, tokenid1,
-                   newowner2, contractaddress2, amount2, tokenid2,
+                   byteNewowner2, contractaddress2, amount2, tokenid2,
                    fee, expiretimestamp, salt]);
                 // if (this.debug) console.log('Hash2: '+hash2);
-                sign2 = await this.sign(hash2);
+                sign2 = await this.sign(hash2,newowner2);
             }
             // if (this.debug) console.log('Sign2: '+sign2);
             return afterSign2(sign1, sign2);
@@ -280,11 +281,11 @@ class Client {
         
         if (sign1 == null){
             let hash1 = this.hashTransaction([blknum1, txindex1, oindex1,
-               newowner1, contractaddress1, amount1, tokenid1,
+               byteNewowner1, contractaddress1, amount1, tokenid1,
                contractaddress2, amount2, tokenid2,
                fee, expiretimestamp, salt]);
             // if (this.debug) console.log('Hash1: '+hash1);
-            sign1 = await this.sign(hash1);
+            sign1 = await this.sign(hash1,newowner1);
         } 
         // if (this.debug) console.log('Sign1: '+sign1)
         return afterSign1(sign1);
@@ -307,39 +308,36 @@ class Client {
      * @param {number} [expiretimestamp] - expiration time for the transaction.
      * @param {number} [salt] - salt.
      * @param {string} [sign1] - owner1's signature.
-     * @param {string} [address1] - owner1's receiving address.
      */
     async sendPsTransaction (
             blknum1, txindex1, oindex1,
             newowner1, contractaddress1, amount1, tokenid1,
             contractaddress2, amount2, tokenid2,
             fee=0, expiretimestamp=null, salt=null,
-            sign1=null, address1=null
+            sign1=null
     ) {
-        if (!root.process){
-            if (sign1 == null && address1 == null){
-                throw new Error("sign1 and address1 can not both be none");
-            }
-        }
         if (expiretimestamp == null){
             expiretimestamp = Math.ceil(Date.now() / 1000) + 3600;
         }
         if (salt == null) {
             salt = Math.floor(Math.random() * 1000000000000);
         }
+
         contractaddress1 = normalizeAddress(contractaddress1);
-        newowner1 = normalizeAddress(newowner1);
+        const byteNewowner1 = normalizeAddress(newowner1);
         contractaddress2 = normalizeAddress(contractaddress2);
         
         let txRaw = [blknum1, txindex1, oindex1,
            0, 0, 0,
-           newowner1, contractaddress1, amount1, tokenid1,
+           byteNewowner1, contractaddress1, amount1, tokenid1,
            normalizeAddress("0x0"), contractaddress2, amount2, tokenid2,
            fee, expiretimestamp, salt];
                 
         let afterSign1 = (sign1) => {
             sign1 = sign1.substr(2);
-            let txRawWithKeys = txRaw.concat([new Buffer(sign1, 'hex'), new Buffer("0", 'hex')]);
+            const byteSign1 = new Buffer(sign1, 'hex');
+            const byteSign2 = new Buffer("0".repeat(130), 'hex');
+            let txRawWithKeys = txRaw.concat([byteSign1, byteSign2]);
             let txEncoded = rlp.encode(txRawWithKeys);
             if (this.debug) console.log("sending ps transaction ...");
             return this.makeChildChainRpcRequest("apply_ps_transaction", [txEncoded.toString('hex')]);
@@ -347,10 +345,11 @@ class Client {
         
         if (sign1 == null){
             let hash1 = this.hashTransaction([blknum1, txindex1, oindex1,
-                newowner1, contractaddress1, amount1, tokenid1,
+                byteNewowner1, contractaddress1, amount1, tokenid1,
                 contractaddress2, amount2, tokenid2,
                 fee, expiretimestamp, salt]);
-            sign1 = await this.sign(hash1);
+            if (this.debug) console.log('Hash1: ',hash1);
+            sign1 = await this.sign(hash1,newowner1);
         } 
         if (this.debug) console.log('Sign1: '+sign1)
         return afterSign1(sign1);       
