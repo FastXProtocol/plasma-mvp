@@ -31,8 +31,8 @@ const fastx = new Client(options);
 const ownerAddress = options.defaultAccount;
 const receiverAddress = process.env.ENV == "LOCAL"? "0x4B3eC6c9dC67079E82152d6D55d8dd96a8e6AA26": "0xe4261dfe12b258687c0a274f823b8c96899c7e21";
 
-const erc20ContractAddress = "0x395B650707cAA0d300615bBa2901398DFf64CF7c";
-const erc721ContractAddress = "0x952CE607bD9ab82e920510b2375cbaD234d28c8F";
+const erc20ContractAddress = process.env.ENV == "LOCAL"? "0x395B650707cAA0d300615bBa2901398DFf64CF7c": "0x395B650707cAA0d300615bBa2901398DFf64CF7c";
+const erc721ContractAddress = process.env.ENV == "LOCAL"? "0xd641205E8F36A858c5867945782C917E3F63d1e8": "0x952CE607bD9ab82e920510b2375cbaD234d28c8F";
 
 
 const sleep = async (millisecond) => {
@@ -157,11 +157,13 @@ const postAd = async() => {
 }
 
 const bidAd = async () => {
-    // await fastx.deposit("0x0", 1, 0);
-    // await sleep(1000);
-    // await fastx.sendEth(receiverAddress, 1);
-    // await logBalance();
-    // await logBalance(receiverAddress);
+    if (process.env.ENV == "LOCAL") {
+        await fastx.deposit("0x0", 1, 0);
+        await sleep(1000);
+        await fastx.sendEth(receiverAddress, 1);
+        await logBalance();
+        await logBalance(receiverAddress);
+    }
 
     let psTransactions = (await fastx.getAllPsTransactions()).data.result;
 
@@ -205,7 +207,7 @@ const main = async () => {
     try {
         // await testTx();
 //         await testPsTx();
-        // await postAd();
+//         await postAd();
         await bidAd();
 //         await testApprove();
     } catch(e) {

@@ -69,6 +69,13 @@ class Client {
                 console.error('No priv key! Did you set the AUTHORITY_KEY in .env file? Abort.');
                 process.exit(-1);
             }
+            if (address) {
+                const addressFromKey = this.web3.eth.accounts.privateKeyToAccount(process.env.AUTHORITY_KEY).address;
+                if (addressFromKey.toLowerCase() != address.toLowerCase()) {
+                    console.error('Your priv key does not match with the address. ' + addressFromKey + ' != ' + address);
+                    process.exit(-1);
+                }
+            }
             return new Promise((resolve, reject) => resolve(Account.sign(hash, process.env.AUTHORITY_KEY)));
         } else {
             return this.web3.eth.sign(hash, address);
