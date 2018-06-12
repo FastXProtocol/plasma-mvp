@@ -13,7 +13,6 @@ export const root = (typeof self === 'object' && self.self === self && self) ||
   this;
 
 export function normalizeAddress (address) {
-    console.log(address);
     if (!address) {
         throw new Error();
     }
