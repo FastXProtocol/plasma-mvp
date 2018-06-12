@@ -69,6 +69,13 @@ class Client {
                 console.error('No priv key! Did you set the AUTHORITY_KEY in .env file? Abort.');
                 process.exit(-1);
             }
+            if (address) {
+                const addressFromKey = this.web3.eth.accounts.privateKeyToAccount(process.env.AUTHORITY_KEY).address;
+                if (addressFromKey.toLowerCase() != address.toLowerCase()) {
+                    console.error('Your priv key does not match with the address. ' + addressFromKey + ' != ' + address);
+                    process.exit(-1);
+                }
+            }
             return new Promise((resolve, reject) => resolve(Account.sign(hash, process.env.AUTHORITY_KEY)));
         } else {
             return this.web3.eth.sign(hash, address);
@@ -271,11 +278,11 @@ class Client {
                    contractaddress1, amount1, tokenid1,
                    byteNewowner2, contractaddress2, amount2, tokenid2,
                    fee, expiretimestamp, salt]);
-                // if (this.debug) console.log('Hash2: '+hash2);
+                if (this.debug) console.log('Hash2: '+hash2);
                 sign2 = await this.sign(hash2, address2);
             }
             if (this.debug) console.log('Sign2: '+sign2);
-            return afterSign2(sign1, sign2);
+            return await afterSign2(sign1, sign2);
         }
         
         if (sign1 == null){
@@ -283,11 +290,11 @@ class Client {
                byteNewowner1, contractaddress1, amount1, tokenid1,
                contractaddress2, amount2, tokenid2,
                fee, expiretimestamp, salt]);
-            // if (this.debug) console.log('Hash1: '+hash1);
+            if (this.debug) console.log('Hash1: '+hash1);
             sign1 = await this.sign(hash1, address1);
         } 
-        // if (this.debug) console.log('Sign1: '+sign1)
-        return afterSign1(sign1);
+        if (this.debug) console.log('Sign1: '+sign1)
+        return await afterSign1(sign1);
     };
 
     /**

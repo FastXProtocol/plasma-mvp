@@ -164,7 +164,7 @@ class ChildChain(object):
             else:
                 valid_signature = tx.sig2 != b'\x00' * 65 and transaction.newowner2 == tx.sender2
                 spent = transaction.spent2
-                if transaction.amount1 != 0:
+                if transaction.amount2 != 0:
                     input_amounts[transaction.contractaddress2] += transaction.amount2
                 if transaction.tokenid2 != 0:
                     input_nfts.append((transaction.contractaddress2, transaction.tokenid2))
