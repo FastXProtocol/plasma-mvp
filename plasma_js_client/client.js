@@ -2,6 +2,7 @@ import axios from 'axios';
 import rlp from 'rlp';
 
 import getWeb3 from "./utils/getWeb3";
+import normalizeAddress from "./utils/normalizeAddress";
 import Account from "eth-lib/lib/account";
 import RootChain from "../contract_data/RootChain.abi";
 import Erc20Interface from "../contract_data/ERC20.abi";
@@ -11,17 +12,6 @@ import Erc721Interface from "../contract_data/ERC721Basic.abi";
 export const root = (typeof self === 'object' && self.self === self && self) ||
   (typeof global === 'object' && global.global === global && global) ||
   this;
-
-export function normalizeAddress (address) {
-    if (!address) {
-        throw new Error();
-    }
-    if ('0x' == address.substr(0,2)) {
-        address = address.substr(2);
-    }
-    if (address == 0) address = '0'.repeat(40);
-    return new Buffer(address, 'hex');
-};
 
 function encodeTransaction (txRaw) {
     return rlp.encode(txRaw);
