@@ -41,4 +41,7 @@ def application(request):
 
 
 if __name__ == '__main__':
-    run_simple('0.0.0.0', 8546, application)
+    ssl_context = None
+    if plasma_config["CHILD_CHAIN_SSL_CRT_PATH"] and plasma_config["CHILD_CHAIN_SSL_KEY_PATH"]:
+        ssl_context = (plasma_config["CHILD_CHAIN_SSL_CRT_PATH"], plasma_config["CHILD_CHAIN_SSL_KEY_PATH"])
+    run_simple(plasma_config["CHILD_CHAIN_HOST"], int(plasma_config["CHILD_CHAIN_PORT"]), application, ssl_context=ssl_context)
