@@ -13,7 +13,7 @@
   "scripts": {
     "build": "babel plasma_js_client -d plasma_js_client_dist",
     "package": "npm run build && ./node_modules/webpack-cli/bin/webpack.js",
-    "test": "npm run build && node -r dotenv/config plasma_js_client_dist/test"
+    "test": "npm run build && node -r dotenv/config plasma_js_client_dist/tests"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
