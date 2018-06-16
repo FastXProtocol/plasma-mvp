@@ -21,3 +21,12 @@ else:
         NETWORK="http://dev.msan.cn:8545",
     )
 plasma_config["COINBASE"] = "0x" + plasma_config["AUTHORITY"].hex()
+
+plasma_config["CHILD_CHAIN_HOST"] = os.getenv("CHILD_CHAIN_HOST") or "0.0.0.0"
+plasma_config["CHILD_CHAIN_PORT"] = os.getenv("CHILD_CHAIN_PORT") or "8546"
+
+for env_key in [
+    "CHILD_CHAIN_SSL_CRT_PATH",
+    "CHILD_CHAIN_SSL_KEY_PATH",
+]:
+    plasma_config[env_key] = os.getenv(env_key)
