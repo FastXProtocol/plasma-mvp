@@ -16,9 +16,9 @@ if os.getenv("ENV") == "LOCAL":
     )
 else:
     plasma_config = dict(
-        ROOT_CHAIN_CONTRACT_ADDRESS="0xDE4E92eF1527B06ceb53694a6C1db4B4Aa62BB9d",
-        AUTHORITY=b'\xfc2\xe7\xc7\xc5S\x91\xeb\xb4\xf9\x11\x87\xc9\x14\x18\xbf\x96\x86\x0c\xa9',
-        NETWORK="http://dev.msan.cn:8545",
+        ROOT_CHAIN_CONTRACT_ADDRESS="0xD9FA1cbB70b74f3Ef259CE0eb48029F02eE0FcD1",
+        AUTHORITY=b'\xd1\x03\xc6G5\xb3$\x16\x15\x18\xf1|\xef\x15\xd1\xe2~\x0b\x9f>',
+        NETWORK="http://localhost:8545",
     )
 plasma_config["COINBASE"] = "0x" + plasma_config["AUTHORITY"].hex()
 
