@@ -1,8 +1,12 @@
+import threading
+import traceback
+
 import click
 from ethereum import utils
 from plasma.utils.utils import confirm_tx
 from plasma.client.client import Client
 from plasma.child_chain.transaction import Transaction
+from plasma.config import plasma_config
 
 
 CONTEXT_SETTINGS = dict(
@@ -79,13 +83,7 @@ def sendtx(client,
     print("Sent transaction")
 
 
-@cli.command()
-@click.argument('key', required=True)
-@click.pass_obj
-def submitblock(client, key):
-    # Get the current block, already decoded by client
-    block = client.get_current_block()
-
+def _submitblock(client, key, block):
     # Sign the block
     block.make_mutable()
     normalized_key = utils.normalize_key(key)
@@ -93,6 +91,28 @@ def submitblock(client, key):
 
     client.submit_block(block)
     print("Submitted current block")
+
+
+@cli.command()
+@click.argument('key', required=True)
+@click.pass_obj
+def submitblock(client, key):
+    # Get the current block, already decoded by client
+    block = client.get_current_block()
+    _submitblock(client, key, block)
+
+
+def _autosubmitblock(client):
+    block = client.get_current_block()
+    if len(block.transaction_set) > 0:
+        _submitblock(client, plasma_config["AUTHORITY_KEY"], block)
+    threading.Timer(plasma_config["BLOCK_AUTO_SUMBITTER_INTERVAL"], lambda: _autosubmitblock(client)).start()
+
+
+@cli.command()
+@click.pass_obj
+def autosubmitblock(client):
+    _autosubmitblock(client)
 
 
 @cli.command()

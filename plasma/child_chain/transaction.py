@@ -131,7 +131,7 @@ class Transaction(rlp.Serializable):
             res[field_name] = field_value
         return res
     
-    def __str__(self):
+    def __repr__(self):
         res = []
         for field_name, field_type in UnsignedTransaction0.fields:
             if field_type == binary:
