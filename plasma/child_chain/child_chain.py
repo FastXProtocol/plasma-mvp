@@ -271,6 +271,8 @@ class ChildChain(object):
     def get_balance(self, address, block):
         if block != "latest":
             raise Exception("only support block: latest")
+        if not address:
+            raise Exception("address required")
 
         output_amounts = defaultdict(int)
         output_nfts = []

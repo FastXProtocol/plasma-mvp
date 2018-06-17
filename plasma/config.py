@@ -16,9 +16,9 @@ if os.getenv("ENV") == "LOCAL":
     )
 else:
     plasma_config = dict(
-        ROOT_CHAIN_CONTRACT_ADDRESS="0xDE4E92eF1527B06ceb53694a6C1db4B4Aa62BB9d",
-        NETWORK="http://dev.msan.cn:8545",
-        BLOCK_AUTO_SUMBITTER_INTERVAL=10,
+        ROOT_CHAIN_CONTRACT_ADDRESS="0xD9FA1cbB70b74f3Ef259CE0eb48029F02eE0FcD1",
+        NETWORK="http://localhost:8545",
+        BLOCK_AUTO_SUMBITTER_INTERVAL=30,
     )
 
 plasma_config["BLOCK_EXPIRE_BUFFER_SECONDS"] = 600
