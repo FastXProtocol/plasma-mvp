@@ -1,5 +1,4 @@
 import fastx from "./config";
-import {logBalance} from "./utils";
 
 
 const testRootChainCall = async () => {

@@ -7,6 +7,10 @@ require('fs').readdirSync(__dirname + '/').forEach(function(file) {
   }
 });
 
+const readableTestIds = Object.keys(tests).map(key => {
+    return key.charAt(4).toLowerCase() + key.slice(5);
+});
+
 
 const runTest = async(testId) => {
     console.log("running " + testId + " ...");
@@ -31,12 +35,14 @@ const runTests = async(testIds) => {
 if (typeof require != "undefined" && require.main == module) {
     if (process.argv.length <= 2){
 //         runTests(Object.keys(tests));
-        console.log("testId required, available tests: " + Object.keys(tests).map(key => {
-            return key.charAt(4).toLowerCase() + key.slice(5);
-        }).join(", "))
+        console.log("testId required, available tests: " + readableTestIds.join(", "));
     } else {
         let testId = process.argv[2];
         testId = "test" + testId.charAt(0).toUpperCase() + testId.slice(1);
-        runTests([testId]);
+        if(tests[testId] == null){
+            console.log("testId invalid, available tests: " + readableTestIds.join(", "));
+        }else{
+            runTests([testId]);
+        }
     }
 }
