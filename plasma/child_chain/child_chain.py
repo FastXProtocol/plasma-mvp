@@ -219,6 +219,7 @@ class ChildChain(object):
             if (int(ttime()) + plasma_config["BLOCK_EXPIRE_BUFFER_SECONDS"] > block.min_expire_timestamp):
                 print('block expired, drop it')
                 self.current_block = Block()
+                self.blocks[self.current_block_number] = self.current_block
                 
                 self.save()
             else:
