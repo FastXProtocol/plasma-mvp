@@ -43,6 +43,7 @@ def application(request):
 
 
 if __name__ == '__main__':
+    print("COINBASE: " + plasma_config["COINBASE"])
     ssl_context = None
     if plasma_config["CHILD_CHAIN_SSL_CRT_PATH"] and plasma_config["CHILD_CHAIN_SSL_KEY_PATH"]:
         ssl_context = (plasma_config["CHILD_CHAIN_SSL_CRT_PATH"], plasma_config["CHILD_CHAIN_SSL_KEY_PATH"])
