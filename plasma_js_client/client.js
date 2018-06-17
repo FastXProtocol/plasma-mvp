@@ -13,9 +13,50 @@ export const root = (typeof self === 'object' && self.self === self && self) ||
   (typeof global === 'object' && global.global === global && global) ||
   this;
 
+
 function encodeTransaction (txRaw) {
     return rlp.encode(txRaw);
 };
+
+
+class RootChainInfo {
+    constructor({rootChain}) {
+        this.rootChain = rootChain;
+        this.simplePublicProperties = ["authority", "currentChildBlock", "currentDepositBlock", "childBlockInterval", "currentFeeExit"];
+        this.simplePublicFunctions = ["getDepositBlock", "getNextExit"];
+        this.simplePublicProperties.forEach(property => {
+            this["get" + property.charAt(0).toUpperCase() + property.slice(1)] = () => {
+                return this.makeRootChainCall(property);
+            }
+        });
+        this.simplePublicFunctions.forEach(property => {
+            this[property] = () => {
+                return this.makeRootChainCall(property);
+            }
+        });
+    }
+    
+    makeRootChainCall (method, params) {
+        return this.rootChain.methods[method].apply(null, params).call();
+    }
+    
+    async getInfo () {
+        const info = {};
+        await Promise.all([
+            ...this.simplePublicProperties.map(x => "get" + x.charAt(0).toUpperCase() + x.slice(1)),
+            ...this.simplePublicFunctions
+        ].map(async (funcName) => {
+            try{
+                info[funcName] = await this[funcName]();
+            }catch(e){
+                console.log(e)
+                info[funcName] = null;
+            }
+        }));
+        return info;
+    }
+}
+
 
 class Client {
     /**
@@ -36,7 +77,9 @@ class Client {
         this.rootChainAddress = options.rootChainAddress || undefined;
         this.defaultAccount = options.defaultAccount || undefined;
 
-        this.rootChain = new this.web3.eth.Contract(RootChain, this.rootChainAddress);
+        const rootChain = new this.web3.eth.Contract(RootChain, this.rootChainAddress);
+        this.rootChain = rootChain;
+        this.rootChainInfo = new RootChainInfo({rootChain});
     }
 
     makeChildChainRpcRequest (method, params) {
