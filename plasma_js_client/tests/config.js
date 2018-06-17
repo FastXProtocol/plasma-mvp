@@ -2,8 +2,6 @@ import Client from "../client";
 import erc721Abi from "../../contract_data/ERC721Token.abi.json"
 
 
-const rootChainAddress = "0xD9FA1cbB70b74f3Ef259CE0eb48029F02eE0FcD1";
-
 export let options = {
     debug: true
 };
@@ -21,7 +19,7 @@ if (process.env.ENV == "LOCAL") {
         ...options,
         gethRpc: "http://192.168.1.100:8545",
         fastXRpc: "http://dev2.msan.cn:8546/jsonrpc",
-        rootChainAddress: "0xD9FA1cbB70b74f3Ef259CE0eb48029F02eE0FcD1",
+        rootChainAddress: "0xC47e711ac6A3D16Db0826c404d8C5d8bDC01d7b1",
         defaultAccount: "0xfc32e7c7c55391ebb4f91187c91418bf96860ca9",
     }
 }
