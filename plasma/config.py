@@ -12,12 +12,18 @@ if os.getenv("ENV") == "LOCAL":
     plasma_config = dict(
         ROOT_CHAIN_CONTRACT_ADDRESS="0xa3b2a1804203b75b494028966c0f62e677447a39",
         NETWORK="http://localhost:8545",
+        BLOCK_AUTO_SUMBITTER_INTERVAL=1,
     )
 else:
     plasma_config = dict(
         ROOT_CHAIN_CONTRACT_ADDRESS="0xDE4E92eF1527B06ceb53694a6C1db4B4Aa62BB9d",
         NETWORK="http://dev.msan.cn:8545",
+        BLOCK_AUTO_SUMBITTER_INTERVAL=10,
     )
+
+plasma_config["BLOCK_EXPIRE_BUFFER_SECONDS"] = 600
+plasma_config["TX_EXPIRE_BUFFER_SECONDS"] = plasma_config["BLOCK_EXPIRE_BUFFER_SECONDS"] + (plasma_config["BLOCK_AUTO_SUMBITTER_INTERVAL"] * 2)
+plasma_config["PSTX_EXPIRE_BUFFER_SECONDS"] = plasma_config["TX_EXPIRE_BUFFER_SECONDS"] * 2
 
 plasma_config["AUTHORITY_KEY"] = os.getenv("AUTHORITY_KEY")
 plasma_config["AUTHORITY_KEY"] = utils.normalize_key(plasma_config["AUTHORITY_KEY"])

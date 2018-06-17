@@ -46,11 +46,13 @@ class RootChainInfo {
             ...this.simplePublicProperties.map(x => "get" + x.charAt(0).toUpperCase() + x.slice(1)),
             ...this.simplePublicFunctions
         ].map(async (funcName) => {
+            let name = funcName.slice(3);
+            name = name.charAt(0).toLowerCase() + name.slice(1);
             try{
-                info[funcName] = await this[funcName]();
+                info[name] = await this[funcName]();
             }catch(e){
                 console.log(e)
-                info[funcName] = null;
+                info[name] = null;
             }
         }));
         return info;

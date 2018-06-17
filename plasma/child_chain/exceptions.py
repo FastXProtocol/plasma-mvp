@@ -2,6 +2,10 @@ class TxAlreadySpentException(Exception):
     """the transaction is already spent"""
 
 
+class TxExpiredException(Exception):
+    """the transaction is expired"""
+
+
 class InvalidTxSignatureException(Exception):
     """the signature of a tx is invalid"""
 
@@ -16,6 +20,10 @@ class InvalidTxInputsException(Exception):
 
 class InvalidBlockSignatureException(Exception):
     """the signature of a block is invalid"""
+
+
+class BlockExpiredException(Exception):
+    """the block is expired"""
 
 
 class TxAmountMismatchException(Exception):

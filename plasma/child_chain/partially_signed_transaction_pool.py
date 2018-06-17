@@ -5,7 +5,7 @@ from time import time as ttime
 import rlp
 from ethereum import utils
 
-from .block import EXPIRE_BUFFER_SECONDS
+from plasma.config import plasma_config
 from .child_chain import PICKLE_DIR
 from .transaction import Transaction
 from .exceptions import PsTxAlreadyExistsException, PsTxExpiredException
@@ -44,7 +44,7 @@ class PartiallySignedTransactionPool(object):
         self.clear_expired_ps_transactions()
     
     def is_ps_transaction_expired(self, ps_transaction):
-        return int(ttime()) + EXPIRE_BUFFER_SECONDS > ps_transaction.expiretimestamp
+        return int(ttime()) + plasma_config["PSTX_EXPIRE_BUFFER_SECONDS"] > ps_transaction.expiretimestamp
     
     def clear_expired_ps_transactions(self):
         self.ps_transactions = list(filter(lambda x: not self.is_ps_transaction_expired(x), self.ps_transactions))

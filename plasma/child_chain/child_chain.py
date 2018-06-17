@@ -1,16 +1,19 @@
 import os
 import pickle
+from time import time as ttime
 from collections import defaultdict
 
 import rlp
 from ethereum import utils
 
+from plasma.config import plasma_config
 from .block import Block
 from .exceptions import (InvalidBlockMerkleException,
                          InvalidBlockSignatureException,
                          InvalidTxSignatureException, TxAlreadySpentException,
                          TxAmountMismatchException, InvalidTxOutputsException,
-                         InvalidTxInputsException, )
+                         InvalidTxInputsException, TxExpiredException,
+                         BlockExpiredException, )
 from .transaction import Transaction
 
 PICKLE_DIR = "child_chain_pickle"
@@ -40,11 +43,11 @@ class ChildChain(object):
         return ["blocks", "current_block_number", "current_block", "pending_transactions"]
     
     def save(self):
-        print('saving child chain...')
+#         print('saving child chain...')
         if not os.path.exists(PICKLE_DIR):
             os.mkdir(PICKLE_DIR)
         for field_name in self.save_field_names:
-            print('saving %s...' % field_name)
+#             print('saving %s...' % field_name)
             with open(os.path.join(PICKLE_DIR, field_name + ".pickle"), "wb") as f:
                 pickle.dump(getattr(self, field_name), f, pickle.HIGHEST_PROTOCOL)
         print('child chain saved')
@@ -125,6 +128,9 @@ class ChildChain(object):
         if (tx.blknum1, tx.txindex1, tx.oindex1) == (tx.blknum2, tx.txindex2, tx.oindex2):
             raise InvalidTxInputsException('failed to validate tx')
         
+        if (int(ttime()) + plasma_config["TX_EXPIRE_BUFFER_SECONDS"] > tx.expiretimestamp):
+            raise TxExpiredException('failed to validate tx')
+        
         self.validate_outputs(tx.contractaddress1, tx.amount1, tx.tokenid1)
         self.validate_outputs(tx.contractaddress2, tx.amount2, tx.tokenid2)
         
@@ -198,6 +204,29 @@ class ChildChain(object):
         if self.partially_signed_transaction_pool is not None:
             self.partially_signed_transaction_pool.utxo_spent(blknum, txindex, oindex)
 
+    def _submit_block(self, block):
+        self.root_chain.transact({'from': '0x' + self.authority.hex()}).submitBlock(block.merkle.root, block.min_expire_timestamp)
+        # TODO: iterate through block and validate transactions
+        self.blocks[self.current_block_number] = self.current_block
+        self.current_block_number += self.child_block_interval
+        self.current_block = Block()
+        self.save()
+    
+
+    def submit_curblock(self):
+        block = self.current_block
+        if len(block.transaction_set) > 0:
+            if (int(ttime()) + plasma_config["BLOCK_EXPIRE_BUFFER_SECONDS"] > block.min_expire_timestamp):
+                print('block expired, drop it')
+                self.current_block = Block()
+                
+                self.save()
+            else:
+                block.sign(plasma_config["AUTHORITY_KEY"])
+                block.merklize_transaction_set()
+                print("submit block #%s" % self.current_block_number)
+                self._submit_block(block)
+    
     def submit_block(self, block):
         block = rlp.decode(utils.decode_hex(block), Block)
         if block.merklize_transaction_set() != self.current_block.merklize_transaction_set():
@@ -206,15 +235,20 @@ class ChildChain(object):
         valid_signature = block.sig != b'\x00' * 65 and block.sender == self.authority
         if not valid_signature:
             raise InvalidBlockSignatureException('failed to submit block')
-
-        print("submit block, min expire timestamp: %s" % (block.min_expire_timestamp, ))
-        self.root_chain.transact({'from': '0x' + self.authority.hex()}).submitBlock(block.merkle.root, block.min_expire_timestamp)
-        # TODO: iterate through block and validate transactions
-        self.blocks[self.current_block_number] = self.current_block
-        self.current_block_number += self.child_block_interval
-        self.current_block = Block()
         
-        self.save()
+        if len(block.transaction_set) == 0:
+            print("no transaction in block, do nothing")
+            return
+        
+        if (int(ttime()) + plasma_config["BLOCK_EXPIRE_BUFFER_SECONDS"] > block.min_expire_timestamp):
+#             raise BlockExpiredException('failed to submit block')
+                print('block expired, drop it!')
+                self.current_block = Block()
+                
+                self.save()
+
+        print("submit block ...")
+        self._submit_block(block)
 
     def get_transaction(self, blknum, txindex):
         return rlp.encode(self.blocks[blknum].transaction_set[txindex]).hex()

@@ -3,12 +3,14 @@ from werkzeug.serving import run_simple
 from jsonrpc import JSONRPCResponseManager, dispatcher
 from plasma.child_chain.child_chain import ChildChain
 from plasma.child_chain.partially_signed_transaction_pool import PartiallySignedTransactionPool
+from plasma.child_chain.block_auto_submitter import BlockAutoSubmitter
 from plasma.config import plasma_config
 from plasma.root_chain.deployer import Deployer
 
 root_chain = Deployer().get_contract_at_address("RootChain", plasma_config['ROOT_CHAIN_CONTRACT_ADDRESS'], concise=False)
 partially_signed_transaction_pool = PartiallySignedTransactionPool()
 child_chain = ChildChain(plasma_config['AUTHORITY'], root_chain, partially_signed_transaction_pool=partially_signed_transaction_pool)
+BlockAutoSubmitter(child_chain, plasma_config['BLOCK_AUTO_SUMBITTER_INTERVAL']).start_timer()
 
 
 @Request.application
