@@ -313,9 +313,9 @@ class ChildChain(object):
         for block_number, block in self.blocks.items():
             for tx_index, tx in enumerate(block.transaction_set):
                 # check if utxo belongs to the owner and is not spent
-                if tx.newowner1 == utils.normalize_address(address) and tx.spent1 == False:
+                if tx.newowner1 == utils.normalize_address(address) and tx.spent1 == False and not (tx.amount1 == 0 and tx.tokenid1 == 0):
                     utxo.append([block_number, tx_index, 0, utils.decode_addr(tx.contractaddress1), tx.amount1, tx.tokenid1])
-                if tx.newowner2 == utils.normalize_address(address) and tx.spent2 == False:
+                if tx.newowner2 == utils.normalize_address(address) and tx.spent2 == False and not (tx.amount2 == 0 and tx.tokenid2 == 0):
                     utxo.append([block_number, tx_index, 1, utils.decode_addr(tx.contractaddress2), tx.amount2, tx.tokenid2])
         return utxo
 
