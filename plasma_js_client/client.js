@@ -192,10 +192,29 @@ class Client {
             );
     };
 
-    getBalance (address, block="latest") {
+    async getBalance (address, block="latest") {
         if (!address && this.defaultAccount) address = this.defaultAccount;
-        return this.makeChildChainRpcRequest("get_balance", [address, block]);
+        let res = null;
+        try {
+            res = await this.makeChildChainRpcRequest("get_balance", [address, block]);
+        } catch (error) {
+            console.error('Error getting balance, ', error);
+            return res;
+        }
+        return res.data.result;
     };
+
+    async getEthBalance (address, block="latest") {
+        const balance = await this.getBalance(address, block);
+        const ftBalance = balance['FT'];
+        if (this.debug) console.log('getEthBalance', ftBalance);
+        for ( let i in ftBalance ) {
+            // console.log(ftBalance[i]);
+            if ('0'.repeat(40) === ftBalance[i][0])
+                return ftBalance[i][1];
+        }
+        return null;
+    }
 
     getAllUTXO (address, block="latest") {
         if (!address && this.defaultAccount) address = this.defaultAccount;
@@ -464,29 +483,34 @@ class Client {
      * @param {Object} options - including from: the sender's address.
      */
     async sendEth(to, amount, options={}) {
-        if (amount <= 0) return console.warn('WARNING: amount must be > 0');
-        
+        if (amount <= 0) return Promise.reject('The amount to send must be > 0')
+
         let from = options.from || this.defaultAccount;
-        if (this.debug) console.log('from: '+from);
+        if (this.debug) console.log('Send ETH from: ' + from + ', amount: '+amount);
+        const ethBalance = await this.getEthBalance(from);
+        if (this.debug) console.log('ethBalance: ', ethBalance);
+
+        if (ethBalance < amount) return Promise.reject('Not enough balance.');
+
         let utxos = (await this.getAllUTXO(from)).data.result;
         if (this.debug) console.log(utxos);
 
-        let utxo, txPromise, tx_amount=0, remainder=amount;
-        for(let i in utxos){
+        let utxo, txPromise, txAmount = 0, remainder = amount;
+        for (let i in utxos) {
             utxo = utxos[utxos.length - i - 1];
             const [blknum, txindex, oindex, contract, balance, tokenid] = utxo;
             if (balance > 0){
                 if (this.debug) console.log(blknum, txindex, oindex, contract, balance, tokenid);
 
                 remainder = remainder - balance;
-                tx_amount = (remainder >= 0) ? balance : balance + remainder;
-                if (this.debug) console.log('output 0: ' + (balance - tx_amount) + ', output 1: ' + tx_amount);
+                txAmount = (remainder >= 0) ? balance : balance + remainder;
+                if (this.debug) console.log('output 0: ' + (balance - txAmount) + ', output 1: ' + txAmount);
 
                 txPromise = this.sendTransaction(
                     blknum, txindex, oindex, 
                     0, 0, 0, 
-                    from, contract, balance - tx_amount, tokenid, 
-                    to, contract, tx_amount, tokenid);
+                    from, contract, balance - txAmount, tokenid, 
+                    to, contract, txAmount, tokenid);
 
                 if (remainder <= 0) {
                     return txPromise;
@@ -503,7 +527,7 @@ class Client {
 
         let utxos = (await this.getAllUTXO(from)).data.result;
 
-        let utxo, txPromise, tx_amount=0, remainder=amount;
+        let utxo, txPromise, txAmount=0, remainder=amount;
         for(let i in utxos){
             utxo = utxos[utxos.length - i - 1];
             const [_blknum, _txindex, _oindex, _contract, _balance, _tokenid] = utxo;
@@ -512,14 +536,14 @@ class Client {
                 if (this.debug) console.log(_blknum, _txindex, _oindex, _contract, _balance, _tokenid);
 
                 remainder = remainder - _balance;
-                tx_amount = (remainder >= 0) ? _balance : _balance + remainder;
-                if (this.debug) console.log('output 0: ' + (_balance - tx_amount) + ', output 1: ' + tx_amount);
+                txAmount = (remainder >= 0) ? _balance : _balance + remainder;
+                if (this.debug) console.log('output 0: ' + (_balance - txAmount) + ', output 1: ' + txAmount);
 
                 txPromise = this.sendPsTransaction(
                     _blknum, _txindex, _oindex, 
                     from, 
-                    _contract, _balance - tx_amount, _tokenid, 
-                    _contract, tx_amount, _tokenid);
+                    _contract, _balance - txAmount, _tokenid, 
+                    _contract, txAmount, _tokenid);
 
                 if (remainder <= 0) {
                     // Done, return the latest tx
