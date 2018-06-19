@@ -51,7 +51,7 @@ class RootChainInfo {
             try{
                 info[name] = await this[funcName]();
             }catch(e){
-                console.log(e)
+//                 console.log(e)
                 info[name] = null;
             }
         }));

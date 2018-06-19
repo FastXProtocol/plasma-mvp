@@ -10,7 +10,7 @@ from plasma.root_chain.deployer import Deployer
 root_chain = Deployer().get_contract_at_address("RootChain", plasma_config['ROOT_CHAIN_CONTRACT_ADDRESS'], concise=False)
 partially_signed_transaction_pool = PartiallySignedTransactionPool()
 child_chain = ChildChain(plasma_config['AUTHORITY'], root_chain, partially_signed_transaction_pool=partially_signed_transaction_pool)
-BlockAutoSubmitter(child_chain, plasma_config['BLOCK_AUTO_SUMBITTER_INTERVAL']).start_timer()
+BlockAutoSubmitter(child_chain, plasma_config['BLOCK_AUTO_SUMBITTER_INTERVAL']).start()
 
 
 @Request.application

@@ -23,11 +23,11 @@ class PartiallySignedTransactionPool(object):
         return ["ps_transactions"]
     
     def save(self):
-        print('saving ps transaction pool...')
+#         print('saving ps transaction pool...')
         if not os.path.exists(PICKLE_DIR):
             os.mkdir(PICKLE_DIR)
         for field_name in self.save_field_names:
-            print('saving %s...' % field_name)
+#             print('saving %s...' % field_name)
             with open(os.path.join(PICKLE_DIR, field_name + ".pickle"), "wb") as f:
                 pickle.dump(getattr(self, field_name), f, pickle.HIGHEST_PROTOCOL)
         print('ps transaction pool saved')
