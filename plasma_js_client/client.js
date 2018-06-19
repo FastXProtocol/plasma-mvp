@@ -287,6 +287,36 @@ class Client {
             await this.searchUTXO(
                 {category: '0x0', tokenId: 0, amount: amount}, {from: _owner});
         return new UTXO(_blkNum, _txIndex, _oIndex, _contract, _balance, _tokenId, _owner);
+    }
+
+    /**
+     * Get the ETH UTXO, or create a new UTXO if no available one is found
+     * but the balance is enough.
+     * @method
+     * @param {number} amount - the amount of UTXO.
+     * @param {Object} options - including from: the asset owner's address.
+     * @returns {[]} - utxo array
+     */
+    async getOrNewEthUtxo(amount, options={}) {
+        let from = options.from || this.defaultAccount;
+        let utxo=[];
+        if (! amount) {
+            new Error('The amount supplied is not valid ->', amount);
+            return utxo;
+        }
+
+        const accountBalance = await this.getEthBalance(from);
+        if (accountBalance < amount) {
+            console.warn('WARNING: Not enough balance');
+            return utxo;
+        }
+
+        await this.sendEth(from, amount, options);
+
+        // Get the newly created utxo.
+        utxo = await this.searchUTXO({category: '0x0', tokenId: 0, amount: amount}, options);
+
+        return utxo;
     };
 
     unlockAccount(account, password, duration=1000) {
@@ -513,7 +543,7 @@ class Client {
     /**
      * Return an available UTXO, if txQueue is supplied, exclude the one in the txQueue.
      * @method
-     * @return {UTXO} return A UTXO instance
+     * @returns {UTXO} return A UTXO instance
      */
     async getNextUtxo(txQueue=[], options={}) {
         let fromAddress = options.from || this.defaultAccount;
