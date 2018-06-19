@@ -1,18 +1,36 @@
-import fastx, {receiverAddress} from "./config";
-import {logBalance, sleep} from "./utils";
+import fastx from "./config";
+import {sleep} from "./utils";
+
+
+const logBalance = async (address) => {
+    console.log("\naddress: ", address );
+    console.log("balance: ", await fastx.getEthBalance(address));
+    let utxos = (await fastx.getAllUTXO(address)).data.result;
+    console.log('\n', utxos);
+}
 
 
 const testTx = async () => {
     console.log("---------- testing transaction ----------");
-    await fastx.deposit("0x0", 100, 0);
+
+    const address = '0xd103c64735b324161518f17cef15d1e27e0b9f3e';
+    const address2 = '0xd103c64735b324161518f17cef15d1e27e0b9f3e';
+
+    await fastx.deposit("0x0", 100, 0, {from:address});
     await sleep(1000);
-    await logBalance();
 
-    await fastx.sendEth(receiverAddress, 150);
-    await sleep(500);
+    await logBalance(address);
+    if ( address != address2 ) {
+        await logBalance(address2);
+    }
 
-    await logBalance();
-    await logBalance(receiverAddress);
+    let txQueue = await fastx.sendEth(address2, 30, {from:address});
+    console.log('\ntxQueue: ', txQueue);
+
+    await logBalance(address);
+    if ( address != address2 ) {
+        await logBalance(address2);
+    }
 };
 
 

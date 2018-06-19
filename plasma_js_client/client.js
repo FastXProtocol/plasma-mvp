@@ -60,6 +60,32 @@ class RootChainInfo {
 }
 
 
+class UTXO {
+    constructor(_blkNum, _txIndex, _oIndex, _contract, _balance, _tokenId, _owner) {
+        this.blkNum = _blkNum;
+        this.txIndex = _txIndex;
+        this.oIndex = _oIndex;
+        this.contract = _contract;
+        this.balance = _balance;
+        this.tokenId = _tokenId;
+        this.owner = _owner;
+    }
+
+    exists() {
+        return this.balance > 0 ? true:false;
+    }
+
+    isEqual(aUtxo) {
+        if ( this.blkNum == aUtxo.blkNum
+            && this.txIndex == aUtxo.txIndex
+            && this.oIndex == aUtxo.oIndex )
+            return true;
+        else
+            return false;
+    }
+}
+
+
 class Client {
     /**
      * FastX wallet client.
@@ -192,10 +218,29 @@ class Client {
             );
     };
 
-    getBalance (address, block="latest") {
+    async getBalance (address, block="latest") {
         if (!address && this.defaultAccount) address = this.defaultAccount;
-        return this.makeChildChainRpcRequest("get_balance", [address, block]);
+        let res = null;
+        try {
+            res = await this.makeChildChainRpcRequest("get_balance", [address, block]);
+        } catch (error) {
+            console.error('Error getting balance, ', error);
+            return res;
+        }
+        return res.data.result;
     };
+
+    async getEthBalance (address, block="latest") {
+        const balance = await this.getBalance(address, block);
+        const ftBalance = balance['FT'];
+        // if (this.debug) console.log('getEthBalance', ftBalance);
+        for ( let i in ftBalance ) {
+            // console.log(ftBalance[i]);
+            if ('0'.repeat(40) === ftBalance[i][0])
+                return ftBalance[i][1];
+        }
+        return null;
+    }
 
     getAllUTXO (address, block="latest") {
         if (!address && this.defaultAccount) address = this.defaultAccount;
@@ -233,6 +278,15 @@ class Client {
             }                
         }
         return [];
+    };
+
+    async searchEthUtxo(amount, options={}) {
+        let _owner = options.from || this.defaultAccount;
+        console.log('\nsearchEthUtxo '+amount+', from: '+_owner);
+        const [_blkNum, _txIndex, _oIndex, _contract, _balance, _tokenId] =
+            await this.searchUTXO(
+                {category: '0x0', tokenId: 0, amount: amount}, {from: _owner});
+        return new UTXO(_blkNum, _txIndex, _oIndex, _contract, _balance, _tokenId, _owner);
     };
 
     unlockAccount(account, password, duration=1000) {
@@ -457,6 +511,176 @@ class Client {
     };
 
     /**
+     * Return an available UTXO, if txQueue is supplied, exclude the one in the txQueue.
+     * @method
+     * @return {UTXO} return A UTXO instance
+     */
+    async getNextUtxo(txQueue=[], options={}) {
+        let fromAddress = options.from || this.defaultAccount;
+
+        const utxos = (await this.getAllUTXO(fromAddress)).data.result;
+        if (this.debug) console.log(utxos);
+
+        let utxo = null, fromUtxo = null;
+        for (let i in utxos) {
+            utxo = utxos[i];
+            const [blknum, txindex, oindex, contract, balance, tokenid] = utxo;
+            let isInQueue = false;
+            if (balance > 0){
+                if (txQueue.length > 0 ) {
+                    for (let j in txQueue) {
+                        fromUtxo = txQueue[j];
+                        if ( blknum == fromUtxo.blkNum 
+                            && txindex == fromUtxo.txIndex
+                            && oindex == fromUtxo.oIndex ) {
+                                isInQueue = true;
+                            }
+                    }
+                }
+                if ( ! isInQueue )
+                    return new UTXO(blknum, txindex, oindex, contract, balance, tokenid, fromAddress);
+            }
+        }
+
+        return new UTXO();
+        // const [blknum, txindex, oindex, contract, balance, tokenid] = utxos[utxos.length - 1];
+        // return new UTXO(blknum, txindex, oindex, contract, balance, tokenid, fromAddress);
+    }
+
+    _swapUtxo(fromUtxo, toUtxo) {
+        return this.sendTransaction(
+            fromUtxo.blkNum, fromUtxo.txIndex, fromUtxo.oIndex,
+            toUtxo.blkNum, toUtxo.txIndex, toUtxo.oIndex,
+            fromUtxo.owner, fromUtxo.contract, toUtxo.balance, fromUtxo.tokenId,
+            toUtxo.owner,toUtxo.contract, fromUtxo.balance, toUtxo.tokenId
+        );
+    }
+
+    _mergeUtxo(fromUtxo, toUtxo) {
+        console.log('Merging utxos amount1: '+fromUtxo.balance+', amount2: '+toUtxo.balance);
+        return this.sendTransaction(
+            fromUtxo.blkNum, fromUtxo.txIndex, fromUtxo.oIndex,
+            toUtxo.blkNum, toUtxo.txIndex, toUtxo.oIndex,
+            fromUtxo.owner, fromUtxo.contract, 0, fromUtxo.tokenId,
+            toUtxo.owner,toUtxo.contract, parseInt(fromUtxo.balance) + parseInt(toUtxo.balance), toUtxo.tokenId
+        );
+    }
+
+    async sendEth2(to, amount, txQueue, options={}) {
+        let fromAddress = options.from || this.defaultAccount;
+
+        let fromUtxo=null, toUtxo=null, utxo=null, remainder=0;
+
+        fromUtxo = await this.searchEthUtxo(amount, {from: fromAddress});
+
+        if (fromAddress == to) {
+            console.log('Merge UTXO');
+            if ( fromUtxo.exists() ) {
+                // don't need to anything
+            } else {
+                if ( txQueue.length > 0) {
+                    fromUtxo = txQueue.pop();
+                } else {
+                    fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress});
+                }    
+                console.log('\nfromUtxo: ', fromUtxo);
+                remainder = amount - fromUtxo.balance;
+                console.log('\nRemainder: ', remainder);  
+                
+                if (remainder < 0) {
+                    let amount1 = fromUtxo.balance + remainder;
+                    let amount2 = fromUtxo.balance - amount1;
+                    toUtxo = new UTXO(0,0,0,fromUtxo.contract,amount2,fromUtxo.tokenId,to);
+                    fromUtxo.balance = amount1;
+                    let tx = await this._swapUtxo(fromUtxo, toUtxo);
+                    // console.log(utxo);
+                } else if ( remainder > 0 ) {
+                    //
+                    // MERGE UTXOs
+                    //
+
+                    // need to push the fromUtxo into Queue first, in order to get
+                    // the correct second Utxo.
+                    txQueue.push(fromUtxo);
+                    
+                    toUtxo = await this.searchEthUtxo(remainder, {from: fromAddress});
+                    if ( toUtxo.exists() && ! toUtxo.isEqual(fromUtxo) ) {
+                        // make sure fromUtxo != toUtxo
+                        txQueue.pop();
+                        let tx = await this._mergeUtxo(fromUtxo, toUtxo);
+                        // console.log(utxo);
+                    } else {
+                        toUtxo = await this.getNextUtxo(txQueue, {from:fromAddress});
+                        console.log('\ntoUtxo: ', toUtxo);
+    
+                        // txQueue = txQueue.push(toUtxo);
+                        remainder = remainder - toUtxo.balance;
+                        console.log('\nRemainder: ', remainder);
+    
+                        if (remainder > 0) {
+                            // more utxo needs to be merged.
+                            // send the transaction here
+                            let tx = await this._mergeUtxo(fromUtxo, toUtxo);
+                            // get the created utxo
+                            let utxo = await this.searchEthUtxo(
+                                fromUtxo.balance + toUtxo.balance, {from: toUtxo.owner});
+                            txQueue.pop();
+                            txQueue.push(utxo);
+                            // then keep working on merging
+                            txQueue = await this.sendEth2(to, amount, txQueue, options);
+                        } else if (remainder < 0) {
+                            let amount1 = toUtxo.balance + remainder;
+                            let amount2 = toUtxo.balance - amount1;
+                            let splitUtxo = new UTXO(0,0,0,toUtxo.contract,amount2,toUtxo.tokenId,toUtxo.owner);
+                            toUtxo.balance = amount1;
+                            console.log('Spliting utxo amount1: '+amount1+', amount2: '+amount2);
+                            // txQueue = txQueue.push(fromUtxo);
+                            let tx = await this._swapUtxo(toUtxo, splitUtxo);
+                            // console.log(utxo);
+                            txQueue = await this.sendEth2(to, amount, txQueue, options);
+                        }
+                    }  
+                }       
+            }          
+        } 
+        else {
+            console.log('Split Utxo');
+            if ( fromUtxo.exists() ) {
+                toUtxo = new UTXO(0,0,0,fromUtxo.contract,0,fromUtxo.tokenId,to);
+                // send the tx
+                let tx = await this._swapUtxo(fromUtxo, toUtxo);
+                // console.log(utxo);
+                return txQueue;              
+            } else {
+                fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress});
+            
+                console.log('\nfromUtxo: ', fromUtxo);
+                remainder = amount - fromUtxo.balance;
+                console.log('\nRemainder: ', remainder);
+                if ( remainder > 0 ) {
+                    toUtxo = new UTXO(0,0,0,fromUtxo.contract,0,fromUtxo.tokenId,to);
+                    let tx = await this._swapUtxo(fromUtxo, toUtxo);
+                    // console.log(utxo);                   
+                    // txQueue = txQueue.concat({from:fromUtxo, to:toUtxo})
+                    // console.log('\nTxQueue ', txQueue);
+                    txQueue = await this.sendEth2(to, remainder, txQueue, options);
+                } else if (remainder < 0) {
+                    let amount1 = fromUtxo.balance + remainder;
+                    let amount2 = fromUtxo.balance - amount1;
+                    toUtxo = new UTXO(0,0,0,fromUtxo.contract,amount2,fromUtxo.tokenId,to);
+                    fromUtxo.balance = amount1;
+                    let tx = await this._swapUtxo(fromUtxo, toUtxo);
+                    // console.log(utxo);
+                } else {
+                    throw new Error('Send Eth2 failed! ');
+                }
+            }
+        }
+
+        return txQueue;
+    }
+
+    /**
      * Send ETH in FastX chain.
      * @method
      * @param {string} to - the receiver's address.
@@ -464,35 +688,21 @@ class Client {
      * @param {Object} options - including from: the sender's address.
      */
     async sendEth(to, amount, options={}) {
-        if (amount <= 0) return console.warn('WARNING: amount must be > 0');
-        
+        if (amount <= 0) return Promise.reject('The amount to send must be > 0')
+
         let from = options.from || this.defaultAccount;
-        if (this.debug) console.log('from: '+from);
-        let utxos = (await this.getAllUTXO(from)).data.result;
-        if (this.debug) console.log(utxos);
+        if (this.debug) console.log('Send ETH from: '+from+' to: '+to+', amount: '+amount);
+        const ethBalance = await this.getEthBalance(from);
+        if (this.debug) console.log('ethBalance: ', ethBalance);
 
-        let utxo, txPromise, tx_amount=0, remainder=amount;
-        for(let i in utxos){
-            utxo = utxos[utxos.length - i - 1];
-            const [blknum, txindex, oindex, contract, balance, tokenid] = utxo;
-            if (balance > 0){
-                if (this.debug) console.log(blknum, txindex, oindex, contract, balance, tokenid);
+        if (ethBalance < amount) return Promise.reject('Not enough balance.');
 
-                remainder = remainder - balance;
-                tx_amount = (remainder >= 0) ? balance : balance + remainder;
-                if (this.debug) console.log('output 0: ' + (balance - tx_amount) + ', output 1: ' + tx_amount);
+        // let txPromise = Promise.reject('No eth sent');
 
-                txPromise = this.sendTransaction(
-                    blknum, txindex, oindex, 
-                    0, 0, 0, 
-                    from, contract, balance - tx_amount, tokenid, 
-                    to, contract, tx_amount, tokenid);
+        let txQueue = [];
+        txQueue = this.sendEth2(to, amount, txQueue, options)
 
-                if (remainder <= 0) {
-                    return txPromise;
-                }
-            }
-        }
+        return txQueue;
     };
 
     async sellToken(contract, amount, tokenid, options={}) {
@@ -503,7 +713,7 @@ class Client {
 
         let utxos = (await this.getAllUTXO(from)).data.result;
 
-        let utxo, txPromise, tx_amount=0, remainder=amount;
+        let utxo, txPromise, txAmount=0, remainder=amount;
         for(let i in utxos){
             utxo = utxos[utxos.length - i - 1];
             const [_blknum, _txindex, _oindex, _contract, _balance, _tokenid] = utxo;
@@ -512,14 +722,14 @@ class Client {
                 if (this.debug) console.log(_blknum, _txindex, _oindex, _contract, _balance, _tokenid);
 
                 remainder = remainder - _balance;
-                tx_amount = (remainder >= 0) ? _balance : _balance + remainder;
-                if (this.debug) console.log('output 0: ' + (_balance - tx_amount) + ', output 1: ' + tx_amount);
+                txAmount = (remainder >= 0) ? _balance : _balance + remainder;
+                if (this.debug) console.log('output 0: ' + (_balance - txAmount) + ', output 1: ' + txAmount);
 
                 txPromise = this.sendPsTransaction(
                     _blknum, _txindex, _oindex, 
                     from, 
-                    _contract, _balance - tx_amount, _tokenid, 
-                    _contract, tx_amount, _tokenid);
+                    _contract, _balance - txAmount, _tokenid, 
+                    _contract, txAmount, _tokenid);
 
                 if (remainder <= 0) {
                     // Done, return the latest tx
