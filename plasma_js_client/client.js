@@ -582,7 +582,8 @@ class Client {
             fromUtxo.blkNum, fromUtxo.txIndex, fromUtxo.oIndex,
             toUtxo.blkNum, toUtxo.txIndex, toUtxo.oIndex,
             fromUtxo.owner, fromUtxo.contract, toUtxo.balance, fromUtxo.tokenId,
-            toUtxo.owner,toUtxo.contract, fromUtxo.balance, toUtxo.tokenId
+            toUtxo.owner,toUtxo.contract, fromUtxo.balance, toUtxo.tokenId,
+            0, null, null, fromUtxo.owner, toUtxo.owner
         );
     }
 
@@ -592,7 +593,8 @@ class Client {
             fromUtxo.blkNum, fromUtxo.txIndex, fromUtxo.oIndex,
             toUtxo.blkNum, toUtxo.txIndex, toUtxo.oIndex,
             fromUtxo.owner, fromUtxo.contract, 0, fromUtxo.tokenId,
-            toUtxo.owner,toUtxo.contract, parseInt(fromUtxo.balance) + parseInt(toUtxo.balance), toUtxo.tokenId
+            toUtxo.owner,toUtxo.contract, parseInt(fromUtxo.balance) + parseInt(toUtxo.balance), toUtxo.tokenId,
+            0, null, null, fromUtxo.owner, toUtxo.owner
         );
     }
 
