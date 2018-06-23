@@ -1,4 +1,4 @@
-import fastx from "./config";
+import fastx, {ownerAddress, receiverAddress} from "./config";
 import {sleep} from "./utils";
 
 
@@ -13,8 +13,16 @@ const logBalance = async (address) => {
 const testTx = async () => {
     console.log("---------- testing transaction ----------");
 
-    const address = '0xd103c64735b324161518f17cef15d1e27e0b9f3e';
-    const address2 = '0xd103c64735b324161518f17cef15d1e27e0b9f3e';
+    let address;
+    let address2;
+
+    if (process.env.ENV == "LOCAL") {
+        address = ownerAddress;
+        address2 = receiverAddress;
+    } else {
+        address = '0xd103c64735b324161518f17cef15d1e27e0b9f3e';
+        address2 = '0xd103c64735b324161518f17cef15d1e27e0b9f3e';
+    }
 
     await fastx.deposit("0x0", 100, 0, {from:address});
     await sleep(1000);

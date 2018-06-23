@@ -22,6 +22,8 @@ def get_max_snapshot():
 
 
 def make_snapshot():
+    if plasma_config["MIN_SNAPSHOT_SECONDS"] == 0:
+        return
     timestamp = ttime()
     max_snapshot = get_max_snapshot()
     if max_snapshot and timestamp - int(max_snapshot) < plasma_config["MIN_SNAPSHOT_SECONDS"]:
