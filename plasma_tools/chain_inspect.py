@@ -1,11 +1,3 @@
-try:
-    import readline
-except ImportError:
-    print("Module readline not available.")
-else:
-    import rlcompleter
-    readline.parse_and_bind("tab: complete")
-
 import os
 import sys
 import pickle
@@ -42,11 +34,13 @@ class ChildChainSnapshot(object):
         for file_name in os.listdir(self.pickle_dir):
             file_path = os.path.join(self.pickle_dir, file_name)
             if os.path.isfile(file_path) and file_name.endswith(".pickle"):
+                object_name = file_name[: -len(".pickle")]
+                print('loading %s...' % object_name)
                 try:
                     with open(file_path, 'rb') as f:
-                        self.snapshot[file_name[: -len(".pickle")]] = pickle.load(f)
+                        self.snapshot[object_name] = pickle.load(f)
                 except Exception as e:
-                    print("load %s failed: %s" % (file_name, str(e)))
+                    print("load %s failed: %s" % (object_name, str(e)))
     
     def __repr__(self):
         res = "ChildChainSnapshot %s<%s>" % (
@@ -57,6 +51,14 @@ class ChildChainSnapshot(object):
 
 
 if __name__ == "__main__":
+    try:
+        import readline
+    except ImportError:
+        print("Module readline not available.")
+    else:
+        import rlcompleter
+        readline.parse_and_bind("tab: complete")
+
     cur_child_chain_snapshot = ChildChainSnapshot()
     vars = {
         "snapshot": cur_child_chain_snapshot,
@@ -66,7 +68,7 @@ if __name__ == "__main__":
         vars["snapshot"] = ChildChainSnapshot(timestamp=timestamp)
         return vars["snapshot"]
     vars["load_snapshot"] = load_snapshot
-    message = """\
+    message = """
 snapshot: snapshot loaded
 load_snapshot(timestamp=None): load snapshot by timestamp or snapshot index
 list_timestamp(): list all timestamp available"""
