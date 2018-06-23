@@ -11,7 +11,7 @@ def list_snapshots():
         dir_path = os.path.join(plasma_config["PICKLE_DIR"], dir_name)
         if os.path.isdir(dir_path):
             res.append(dir_name)
-    return res
+    return sorted(res)
 
 
 def get_max_snapshot():
@@ -40,3 +40,7 @@ def make_snapshot():
         if os.path.isfile(file_path) and file_name.endswith(".pickle"):
             shutil.copy(file_path, os.path.join(snapshot_dir, file_name))
     print("snapshot created")
+    snapshots = list_snapshots()
+    if len(snapshots) > plasma_config["MAX_SNAPSHOTS"]:
+        for snapshot in snapshots[:len(snapshots) - plasma_config["MAX_SNAPSHOTS"]]:
+            shutil.rmtree(os.path.join(plasma_config["PICKLE_DIR"], snapshot), ignore_errors=True)
