@@ -577,13 +577,13 @@ class Client {
         // return new UTXO(blknum, txindex, oindex, contract, balance, tokenid, fromAddress);
     }
 
-    _swapUtxo(fromUtxo, toUtxo) {
+    _splitUtxo(fromUtxo, toUtxo) {
         return this.sendTransaction(
             fromUtxo.blkNum, fromUtxo.txIndex, fromUtxo.oIndex,
             toUtxo.blkNum, toUtxo.txIndex, toUtxo.oIndex,
             fromUtxo.owner, fromUtxo.contract, toUtxo.balance, fromUtxo.tokenId,
             toUtxo.owner,toUtxo.contract, fromUtxo.balance, toUtxo.tokenId,
-            0, null, null, fromUtxo.owner, toUtxo.owner
+            0, null, null, fromUtxo.owner, fromUtxo.owner
         );
     }
 
@@ -624,7 +624,7 @@ class Client {
                     let amount2 = fromUtxo.balance - amount1;
                     toUtxo = new UTXO(0,0,0,fromUtxo.contract,amount2,fromUtxo.tokenId,to);
                     fromUtxo.balance = amount1;
-                    let tx = await this._swapUtxo(fromUtxo, toUtxo);
+                    let tx = await this._splitUtxo(fromUtxo, toUtxo);
                     // console.log(utxo);
                 } else if ( remainder > 0 ) {
                     //
@@ -667,7 +667,7 @@ class Client {
                             toUtxo.balance = amount1;
                             console.log('Spliting utxo amount1: '+amount1+', amount2: '+amount2);
                             // txQueue = txQueue.push(fromUtxo);
-                            let tx = await this._swapUtxo(toUtxo, splitUtxo);
+                            let tx = await this._splitUtxo(toUtxo, splitUtxo);
                             // console.log(utxo);
                             txQueue = await this.sendEth2(to, amount, txQueue, options);
                         }
@@ -680,7 +680,7 @@ class Client {
             if ( fromUtxo.exists() ) {
                 toUtxo = new UTXO(0,0,0,fromUtxo.contract,0,fromUtxo.tokenId,to);
                 // send the tx
-                let tx = await this._swapUtxo(fromUtxo, toUtxo);
+                let tx = await this._splitUtxo(fromUtxo, toUtxo);
                 // console.log(utxo);
                 return txQueue;              
             } else {
@@ -691,7 +691,7 @@ class Client {
                 console.log('\nRemainder: ', remainder);
                 if ( remainder > 0 ) {
                     toUtxo = new UTXO(0,0,0,fromUtxo.contract,0,fromUtxo.tokenId,to);
-                    let tx = await this._swapUtxo(fromUtxo, toUtxo);
+                    let tx = await this._splitUtxo(fromUtxo, toUtxo);
                     // console.log(utxo);                   
                     // txQueue = txQueue.concat({from:fromUtxo, to:toUtxo})
                     // console.log('\nTxQueue ', txQueue);
@@ -701,7 +701,7 @@ class Client {
                     let amount2 = fromUtxo.balance - amount1;
                     toUtxo = new UTXO(0,0,0,fromUtxo.contract,amount2,fromUtxo.tokenId,to);
                     fromUtxo.balance = amount1;
-                    let tx = await this._swapUtxo(fromUtxo, toUtxo);
+                    let tx = await this._splitUtxo(fromUtxo, toUtxo);
                     // console.log(utxo);
                 } else {
                     throw new Error('Send Eth2 failed! ');
