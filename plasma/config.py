@@ -13,6 +13,7 @@ if os.getenv("ENV") == "LOCAL":
         ROOT_CHAIN_CONTRACT_ADDRESS="0xa3b2a1804203b75b494028966c0f62e677447a39",
         NETWORK="http://localhost:8545",
         BLOCK_AUTO_SUMBITTER_INTERVAL=1,
+        MAX_SNAPSHOTS=100,
         MIN_SNAPSHOT_SECONDS=10, # set 0 will not make snapshot
     )
 else:
@@ -20,7 +21,8 @@ else:
         ROOT_CHAIN_CONTRACT_ADDRESS="0xC47e711ac6A3D16Db0826c404d8C5d8bDC01d7b1",
         NETWORK="http://localhost:8545",
         BLOCK_AUTO_SUMBITTER_INTERVAL=30,
-        MIN_SNAPSHOT_SECONDS=0, # set 0 will not make snapshot
+        MAX_SNAPSHOTS=50,
+        MIN_SNAPSHOT_SECONDS=3600, # set 0 will not make snapshot
     )
 
 plasma_config["PICKLE_DIR"] = "child_chain_pickle"

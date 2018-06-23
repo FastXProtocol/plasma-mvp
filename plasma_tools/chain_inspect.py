@@ -19,7 +19,7 @@ from plasma.config import plasma_config
 from plasma.child_chain.snapshot import list_snapshots
 
 
-list_timestamp = lambda: sorted(list_snapshots())
+list_timestamp = list_snapshots
 
 
 class ChildChainSnapshot(object):
