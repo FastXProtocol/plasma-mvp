@@ -12,7 +12,6 @@ from web3.contract import ConciseContract, Contract
 from web3 import Web3, HTTPProvider
 from plasma.config import plasma_config
 from plasma.root_chain.deployer import Deployer
-from plasma.child_chain.child_chain import PICKLE_DIR
 
 
 OWN_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -22,7 +21,7 @@ OUTPUT_DIR = OWN_DIR + '/contract_data'
 
 def deploy():
     print("deleting child chain pickle")
-    shutil.rmtree(PICKLE_DIR, ignore_errors=True)
+    shutil.rmtree(plasma_config["PICKLE_DIR"], ignore_errors=True)
     
     deployer = Deployer()
     deployer.compile_all()

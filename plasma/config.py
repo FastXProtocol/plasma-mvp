@@ -13,13 +13,17 @@ if os.getenv("ENV") == "LOCAL":
         ROOT_CHAIN_CONTRACT_ADDRESS="0xa3b2a1804203b75b494028966c0f62e677447a39",
         NETWORK="http://localhost:8545",
         BLOCK_AUTO_SUMBITTER_INTERVAL=1,
+        MIN_SNAPSHOT_SECONDS=10,
     )
 else:
     plasma_config = dict(
         ROOT_CHAIN_CONTRACT_ADDRESS="0xD9FA1cbB70b74f3Ef259CE0eb48029F02eE0FcD1",
         NETWORK="http://localhost:8545",
         BLOCK_AUTO_SUMBITTER_INTERVAL=30,
+        MIN_SNAPSHOT_SECONDS=60,
     )
+
+plasma_config["PICKLE_DIR"] = "child_chain_pickle"
 
 plasma_config["BLOCK_EXPIRE_BUFFER_SECONDS"] = 600
 plasma_config["TX_EXPIRE_BUFFER_SECONDS"] = plasma_config["BLOCK_EXPIRE_BUFFER_SECONDS"] + (plasma_config["BLOCK_AUTO_SUMBITTER_INTERVAL"] * 2)

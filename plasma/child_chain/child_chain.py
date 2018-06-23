@@ -15,8 +15,7 @@ from .exceptions import (InvalidBlockMerkleException,
                          InvalidTxInputsException, TxExpiredException,
                          BlockExpiredException, )
 from .transaction import Transaction
-
-PICKLE_DIR = "child_chain_pickle"
+from .snapshot import make_snapshot
 
 
 class ChildChain(object):
@@ -44,20 +43,24 @@ class ChildChain(object):
     
     def save(self):
 #         print('saving child chain...')
-        if not os.path.exists(PICKLE_DIR):
-            os.mkdir(PICKLE_DIR)
+        if not os.path.exists(plasma_config["PICKLE_DIR"]):
+            os.mkdir(plasma_config["PICKLE_DIR"])
+
+        make_snapshot()
+
         for field_name in self.save_field_names:
 #             print('saving %s...' % field_name)
-            with open(os.path.join(PICKLE_DIR, field_name + ".pickle"), "wb") as f:
+            with open(os.path.join(plasma_config["PICKLE_DIR"], field_name + ".pickle"), "wb") as f:
                 pickle.dump(getattr(self, field_name), f, pickle.HIGHEST_PROTOCOL)
         print('child chain saved')
+        
     
     def load(self):
-        if os.path.exists(PICKLE_DIR):
+        if os.path.exists(plasma_config["PICKLE_DIR"]):
             for field_name in self.save_field_names:
                 print('loading %s...' % field_name)
                 try:
-                    with open(os.path.join(PICKLE_DIR, field_name + ".pickle"), 'rb') as f:
+                    with open(os.path.join(plasma_config["PICKLE_DIR"], field_name + ".pickle"), 'rb') as f:
                         setattr(self, field_name, pickle.load(f))
                 except Exception as e:
                     print("load %s failed: %s" % (field_name, str(e)))
