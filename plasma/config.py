@@ -14,7 +14,7 @@ if os.getenv("ENV") == "LOCAL":
         NETWORK="http://localhost:8545",
         BLOCK_AUTO_SUMBITTER_INTERVAL=1,
         MAX_SNAPSHOTS=100,
-        MIN_SNAPSHOT_SECONDS=10, # set 0 will not make snapshot
+        MIN_SNAPSHOT_SECONDS=15, # set 0 will not make snapshot
     )
 else:
     plasma_config = dict(
@@ -31,8 +31,7 @@ plasma_config["BLOCK_EXPIRE_BUFFER_SECONDS"] = 600
 plasma_config["TX_EXPIRE_BUFFER_SECONDS"] = plasma_config["BLOCK_EXPIRE_BUFFER_SECONDS"] + (plasma_config["BLOCK_AUTO_SUMBITTER_INTERVAL"] * 2)
 plasma_config["PSTX_EXPIRE_BUFFER_SECONDS"] = plasma_config["TX_EXPIRE_BUFFER_SECONDS"] * 2
 
-plasma_config["AUTHORITY_KEY"] = os.getenv("AUTHORITY_KEY")
-plasma_config["AUTHORITY_KEY"] = utils.normalize_key(plasma_config["AUTHORITY_KEY"])
+plasma_config["AUTHORITY_KEY"] = utils.normalize_key(os.getenv("AUTHORITY_KEY"))
 plasma_config["AUTHORITY"] = utils.privtoaddr(plasma_config["AUTHORITY_KEY"])
 plasma_config["COINBASE"] = "0x" + plasma_config["AUTHORITY"].hex()
 
