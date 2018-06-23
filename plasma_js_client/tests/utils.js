@@ -8,7 +8,7 @@ export const sleep = async (millisecond) => {
 
 
 export const logBalance = async (address) => {
-    let res = (await fastx.getBalance(address)).data.result;
+    let res = (await fastx.getBalance(address));
     console.log("\naddress: "+ (address || fastx.defaultAccount) );
     console.log("balance: ", res);
 };

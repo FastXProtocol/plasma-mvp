@@ -17,7 +17,7 @@ if os.getenv("ENV") == "LOCAL":
     )
 else:
     plasma_config = dict(
-        ROOT_CHAIN_CONTRACT_ADDRESS="0xD9FA1cbB70b74f3Ef259CE0eb48029F02eE0FcD1",
+        ROOT_CHAIN_CONTRACT_ADDRESS="0xC47e711ac6A3D16Db0826c404d8C5d8bDC01d7b1",
         NETWORK="http://localhost:8545",
         BLOCK_AUTO_SUMBITTER_INTERVAL=30,
         MIN_SNAPSHOT_SECONDS=60,
