@@ -136,6 +136,9 @@ class Client {
                     console.error('Your priv key does not match with the address. ' + addressFromKey + ' != ' + address);
                     process.exit(-1);
                 }
+            } else {
+                console.error('address required');
+                process.exit(-1);
             }
             return new Promise((resolve, reject) => resolve(Account.sign(hash, process.env.AUTHORITY_KEY)));
         } else {
