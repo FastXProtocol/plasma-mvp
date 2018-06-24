@@ -191,8 +191,8 @@ contract RootChain {
         private
     {
         uint256 blknum = utxoPos / 1000000000;
-        uint256 exitable_at = Math.max(created_at + 2 weeks, block.timestamp + 1 weeks);
-//         uint256 exitable_at = Math.max(created_at, block.timestamp); // only for debug
+//         uint256 exitable_at = Math.max(created_at + 2 weeks, block.timestamp + 1 weeks);
+        uint256 exitable_at = Math.max(created_at, block.timestamp); // only for debug
         uint256 priority = exitable_at << 128 | utxoPos;
         require(amount > 0 || tokenId > 0);
         require(exits[utxoPos].contractAddress == address(0) && exits[utxoPos].amount == 0 && exits[utxoPos].tokenId == 0);
