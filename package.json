@@ -11,9 +11,10 @@
     "web3": "^1.0.0-beta.34"
   },
   "scripts": {
-    "build": "babel plasma_js_client -d plasma_js_client_dist",
+    "build": "rm -r plasma_js_client_dist; babel plasma_js_client -d plasma_js_client_dist",
     "package": "npm run build && ./node_modules/webpack-cli/bin/webpack.js",
-    "test": "npm run build && node -r dotenv/config plasma_js_client_dist/tests"
+    "pure_test": "node -r dotenv/config plasma_js_client_dist/tests",
+    "test": "npm run build && npm run pure_test"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",

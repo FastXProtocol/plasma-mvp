@@ -34,8 +34,16 @@ class ChildChain(object):
             self.load()
 
         # Register for deposit event listener
-        deposit_filter = self.root_chain.on('Deposit')
+        deposit_filter = self.root_chain.on("Deposit")
         deposit_filter.watch(self.apply_deposit)
+        
+        exit_start_filter = self.root_chain.on("ExitStarted")
+        exit_start_filter.watch(self.apply_exit_start)
+
+        if plasma_config["DEBUG"]:
+            for abi in self.root_chain.abi:
+                if abi.get("type") == "event" and abi["name"] not in ["Deposit", "ExitStarted"]:
+                    self.root_chain.on(abi["name"]).watch(lambda event: print("Root Chain Event: %s" % abi["name"], event))
     
     @property
     def save_field_names(self):
@@ -80,6 +88,49 @@ class ChildChain(object):
 
         self.blocks[blknum1] = deposit_block
         print("Deposit Block Number: %s" % blknum1)
+        
+        self.save()
+    
+    def challenge_exit(self):
+        print("Challenge Exit")
+        pass
+    
+    def apply_exit_start(self, event):
+        event_args = event['args']
+        exitor = event_args['exitor']
+        utxopos = event_args['utxoPos']
+        contractaddress = event_args['contractAddress']
+        amount = event_args['amount']
+        tokenid = event_args['tokenId']
+        
+        blknum = utxopos // 1000000000
+        txindex = (utxopos % 1000000000) // 10000
+        oindex = utxopos - blknum * 1000000000 - txindex * 10000
+        
+        block = self.blocks.get(blknum)
+        if block is None:
+            return self.challenge_exit()
+        
+        try:
+            transaction = block.transaction_set[txindex]
+        except IndexError:
+            return self.challenge_exit()
+        
+        if oindex == 0:
+            if utils.normalize_address(transaction.newowner1) != utils.normalize_address(exitor) or \
+                utils.normalize_address(transaction.contractaddress1) != utils.normalize_address(contractaddress) or \
+                transaction.amount1 != amount or \
+                transaction.tokenid1 != tokenid:
+                return self.challenge_exit()
+        else:
+            if utils.normalize_address(transaction.newowner2) != utils.normalize_address(exitor) or \
+                utils.normalize_address(transaction.contractaddress2) != utils.normalize_address(contractaddress) or \
+                transaction.amount2 != amount or \
+                transaction.tokenid2 != tokenid:
+                return self.challenge_exit()
+        
+        self.mark_utxo_spent(blknum, txindex, oindex)
+        print("Exit Start %s %s %s" % (blknum, txindex, oindex))
         
         self.save()
 
