@@ -167,13 +167,14 @@ contract RootChain {
     // @param txBytes The transaction being exited in RLP bytes format
     // @param proof Proof of the exiting transactions inclusion for the block specified by utxoPos
     // @param sigs Both transaction signatures and confirmations signatures used to verify that the exiting transaction has been confirmed
-/*
     function startExit(uint256 utxoPos, bytes txBytes, bytes proof, bytes sigs)
         public
     {
         uint256 blknum = utxoPos / 1000000000;
+        require(blknum % childBlockInterval == 0);
         uint256 txindex = (utxoPos % 1000000000) / 10000;
-        uint256 oindex = utxoPos - blknum * 1000000000 - txindex * 10000; 
+        uint256 oindex = utxoPos - blknum * 1000000000 - txindex * 10000;
+/*
         var exitingTx = txBytes.createExitingTx(11, oindex);
         
         require(msg.sender == exitingTx.exitor);
@@ -182,15 +183,16 @@ contract RootChain {
         require(Validate.checkSigs(keccak256(txBytes), root, exitingTx.inputCount, sigs));
         require(merkleHash.checkMembership(txindex, root, proof));
         addExitToQueue(utxoPos, exitingTx.exitor, exitingTx.amount, childChain[blknum].created_at);
-    }
 */
+    }
 
     // Priority is a given utxos position in the exit priority queue
     function addExitToQueue(uint256 utxoPos, address exitor, address contractAddress, uint256 amount, uint256 tokenId, uint256 created_at)
         private
     {
         uint256 blknum = utxoPos / 1000000000;
-        uint256 exitable_at = Math.max(created_at + 2 weeks, block.timestamp + 1 weeks);
+//         uint256 exitable_at = Math.max(created_at + 2 weeks, block.timestamp + 1 weeks);
+        uint256 exitable_at = Math.max(created_at, block.timestamp);
         uint256 priority = exitable_at << 128 | utxoPos;
         require(amount > 0 || tokenId > 0);
         require(exits[utxoPos].contractAddress == address(0) && exits[utxoPos].amount == 0 && exits[utxoPos].tokenId == 0);
@@ -239,7 +241,17 @@ contract RootChain {
         exit memory currentExit = exits[utxoPos];
         while (exitable_at < block.timestamp && exitsQueue.currentSize() > 0) {
             currentExit = exits[utxoPos];
-            currentExit.owner.transfer(currentExit.amount);
+            
+            if(currentExit.contractAddress == address(0)){
+                currentExit.owner.transfer(currentExit.amount);
+            }else if(currentExit.amount == 0){
+                ERC721Basic erc721Contract = ERC721Basic(currentExit.contractAddress);
+                erc721Contract.transferFrom(address(this), currentExit.owner, currentExit.tokenId);
+            }else{
+                ERC20 erc20Contract = ERC20(currentExit.contractAddress);
+                erc20Contract.transferFrom(address(this), currentExit.owner, currentExit.amount);
+            }
+            
             exitsQueue.delMin();
             delete exits[utxoPos].owner;
 

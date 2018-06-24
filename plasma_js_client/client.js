@@ -218,6 +218,21 @@ class Client {
             );
     };
     
+    finalizeExits(options={}) {
+        let account = options.from;
+        if (!account) {
+            if (this.defaultAccount) account = this.defaultAccount;
+            else throw new Error('No default account specified!');
+        }
+        let transact = {from: account};
+        return this.rootChain.methods.finalizeExits().send(transact)
+            .on('transactionHash',
+                (hash) => {
+                    if (this.debug) console.log(hash);
+                }
+            );
+    };
+    
     getErc20Interface (contractAddress) {
         return new this.web3.eth.Contract(Erc20Interface, contractAddress);
     };
