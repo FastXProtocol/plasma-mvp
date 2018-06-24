@@ -2,7 +2,8 @@ import fastx from "./config";
 import {getUTXOs, sleep} from "./utils";
 
 
-const testStartExit = async () => {
+const testStartDepositExit = async () => {
+    console.log("testStartDepositExit");
     await fastx.deposit("0x0", 100, 0);
     await sleep(1000);
     console.log("root chain info: ", await fastx.rootChainInfo.getInfo());
@@ -19,6 +20,11 @@ const testStartExit = async () => {
             break;
         }
     }
+};
+
+
+const testStartExit = async () => {
+    await testStartDepositExit();
 };
 
 
