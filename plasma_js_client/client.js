@@ -182,6 +182,34 @@ class Client {
             );
     };
     
+    startDepositExit (blknum, txindex, oindex, contractAddress, amount, tokenid, options={}) {
+        let account = options.from;
+        if (!account) {
+            if (this.defaultAccount) account = this.defaultAccount;
+            else throw new Error('No default account specified!');
+        }
+        const depositPos = blknum * 1000000000 + txindex * 10000 + oindex;
+        if (this.debug)
+            console.log("startDepositExit " +
+                ", depositPos: " + depositPos +
+                ", contractAddress: " + contractAddress +
+                ", amount: " + amount +
+                ", tokenid: " + tokenid +
+                ", account: " + account);
+
+        let transact = {from: account, gas: 3894132};
+        let aContract = normalizeAddress(contractAddress);
+        return this.rootChain.methods.startDepositExit(
+                depositPos, contractAddress, amount, tokenid
+            ).send(
+                transact
+            ).on('transactionHash',
+                (hash) => {
+                    if (this.debug) console.log(hash);
+                }
+            );
+    };
+    
     getErc20Interface (contractAddress) {
         return new this.web3.eth.Contract(Erc20Interface, contractAddress);
     };

@@ -24,7 +24,7 @@ contract RootChain {
      * Events
      */
     event Deposit(address depositor, address contractAddress, uint256 amount, uint256 tokenId, uint256 depositBlock);
-    event ExitStarted(address exitor, uint256 utxoPos,uint256 amount);
+    event ExitStarted(address exitor, uint256 utxoPos, address contractAddress, uint256 amount, uint256 tokenId);
 
     /*
      *  Storage
@@ -46,7 +46,9 @@ contract RootChain {
 
     struct exit {
         address owner;
+        address contractAddress;
         uint256 amount;
+        uint256 tokenId;
     }
 
     struct childBlock {
@@ -92,11 +94,14 @@ contract RootChain {
         currentDepositBlock = 1;
     }
     
-    function getRoot(address contractAddress, uint256 amount, uint256 tokenId) private returns(bytes32 root){
+    function getRoot(address contractAddress, uint256 amount, uint256 tokenId)
+        private
+        returns(bytes32 root)
+    {
         if(contractAddress == address(0)){
             require(amount == msg.value);
             require(tokenId == 0);
-            root = keccak256(msg.sender, contractAddress, msg.value, 0);
+//             root = keccak256(msg.sender, contractAddress, msg.value, 0);
         }else if(amount == 0){
             require(contractAddress != 0);
             require(tokenId != 0);
@@ -104,7 +109,7 @@ contract RootChain {
             require(erc721Contract.ownerOf(tokenId) != address(this));
             erc721Contract.transferFrom(msg.sender, address(this), tokenId);
             require(erc721Contract.ownerOf(tokenId) == address(this));
-            root = keccak256(msg.sender, contractAddress, 0, tokenId);
+//             root = keccak256(msg.sender, contractAddress, 0, tokenId);
         }else{
             require(contractAddress != 0);
             require(tokenId == 0);
@@ -112,8 +117,9 @@ contract RootChain {
             uint256 originAmount = erc20Contract.balanceOf(address(this));
             erc20Contract.transferFrom(msg.sender, address(this), amount);
             require(erc20Contract.balanceOf(address(this)) - originAmount == amount);
-            root = keccak256(msg.sender, contractAddress, amount, 0);
+//             root = keccak256(msg.sender, contractAddress, amount, 0);
         }
+        root = keccak256(msg.sender, contractAddress, amount, tokenId);
     }
 
     // @dev Allows anyone to deposit funds into the Plasma chain
@@ -133,18 +139,19 @@ contract RootChain {
         Deposit(msg.sender, contractAddress, amount, tokenId, depositBlock);
     }
 
-    function startDepositExit(uint256 depositPos, uint256 amount)
+    function startDepositExit(uint256 depositPos, address contractAddress, uint256 amount, uint256 tokenId)
         public
     {
         uint256 blknum = depositPos / 1000000000;
         // Makes sure that deposit position is actually a deposit
         require(blknum % childBlockInterval != 0);
         bytes32 root = childChain[blknum].root;
-        bytes32 depositHash = keccak256(msg.sender, amount);
+        bytes32 depositHash = keccak256(msg.sender, contractAddress, amount, tokenId);
         require(root == depositHash);
-        addExitToQueue(depositPos, msg.sender, amount, childChain[blknum].created_at);
+        addExitToQueue(depositPos, msg.sender, contractAddress, amount, tokenId, childChain[blknum].created_at);
     }
 
+/*
     function startFeeExit(uint256 amount)
         public
         isAuthority
@@ -153,12 +160,14 @@ contract RootChain {
         addExitToQueue(currentFeeExit, msg.sender, amount, block.timestamp + 1);
         currentFeeExit = currentFeeExit.add(1);
     }
+*/
 
     // @dev Starts to exit a specified utxo
     // @param utxoPos The position of the exiting utxo in the format of blknum * 1000000000 + index * 10000 + oindex
     // @param txBytes The transaction being exited in RLP bytes format
     // @param proof Proof of the exiting transactions inclusion for the block specified by utxoPos
     // @param sigs Both transaction signatures and confirmations signatures used to verify that the exiting transaction has been confirmed
+/*
     function startExit(uint256 utxoPos, bytes txBytes, bytes proof, bytes sigs)
         public
     {
@@ -174,22 +183,25 @@ contract RootChain {
         require(merkleHash.checkMembership(txindex, root, proof));
         addExitToQueue(utxoPos, exitingTx.exitor, exitingTx.amount, childChain[blknum].created_at);
     }
+*/
 
     // Priority is a given utxos position in the exit priority queue
-    function addExitToQueue(uint256 utxoPos, address exitor, uint256 amount, uint256 created_at)
+    function addExitToQueue(uint256 utxoPos, address exitor, address contractAddress, uint256 amount, uint256 tokenId, uint256 created_at)
         private
     {
         uint256 blknum = utxoPos / 1000000000;
         uint256 exitable_at = Math.max(created_at + 2 weeks, block.timestamp + 1 weeks);
         uint256 priority = exitable_at << 128 | utxoPos;
-        require(amount > 0);
-        require(exits[utxoPos].amount == 0);
+        require(amount > 0 || tokenId > 0);
+        require(exits[utxoPos].contractAddress == address(0) && exits[utxoPos].amount == 0 && exits[utxoPos].tokenId == 0);
         exitsQueue.insert(priority);
         exits[utxoPos] = exit({
             owner: exitor,
-            amount: amount
+            contractAddress: contractAddress,
+            amount: amount,
+            tokenId: tokenId
         });
-        ExitStarted(msg.sender, utxoPos, amount);
+        ExitStarted(msg.sender, utxoPos, contractAddress, amount, tokenId);
     }
 
     // @dev Allows anyone to challenge an exiting transaction by submitting proof of a double spend on the child chain

@@ -36,6 +36,11 @@ class ChildChain(object):
         # Register for deposit event listener
         deposit_filter = self.root_chain.on('Deposit')
         deposit_filter.watch(self.apply_deposit)
+
+        if plasma_config["DEBUG"]:
+            for abi in self.root_chain.abi:
+                if abi.get("type") == "event":
+                    self.root_chain.on(abi["name"]).watch(lambda event: print("Root Chain Event: %s" % abi["name"], event))
     
     @property
     def save_field_names(self):
