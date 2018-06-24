@@ -182,6 +182,14 @@ class Client {
             );
     };
     
+    startExit(blknum, txindex, oindex, contractAddress, amount, tokenid, options={}) {
+        if (blknum % 1000 == 0) {
+            throw new Error("normal exit not supported");
+        } else {
+            return this.startDepositExit(blknum, txindex, oindex, contractAddress, amount, tokenid, options);
+        }
+    }
+    
     startDepositExit (blknum, txindex, oindex, contractAddress, amount, tokenid, options={}) {
         let account = options.from;
         if (!account) {

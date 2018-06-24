@@ -14,8 +14,8 @@ const testStartDepositExit = async () => {
             console.log("UTXO", utxo);
             const depositPos = blknum * 1000000000 + txindex * 10000 + oindex;
             console.log(depositPos, contractAddress, amount, tokenid)
-            await fastx.startDepositExit(blknum, txindex, oindex, contractAddress, amount, tokenid);
-            console.log("startDepositExit sent");
+            await fastx.startExit(blknum, txindex, oindex, contractAddress, amount, tokenid);
+            console.log("startExit sent");
             console.log("root chain info: ", await fastx.rootChainInfo.getInfo());
             break;
         }
