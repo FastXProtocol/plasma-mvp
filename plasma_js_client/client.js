@@ -355,14 +355,12 @@ class Client {
         let from = options.from || this.defaultAccount;
         let utxo=[];
         if (! amount) {
-            new Error('The amount supplied is not valid ->', amount);
-            return utxo;
+            throw new Error('The amount supplied is not valid ->', amount);
         }
 
         const accountBalance = await this.getEthBalance(from);
         if (accountBalance < amount) {
-            console.warn('WARNING: Not enough balance');
-            return utxo;
+            throw new Error('Not enough balance');
         }
 
         await this.sendEth(from, amount, options);
