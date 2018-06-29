@@ -18,6 +18,119 @@ function encodeTransaction (txRaw) {
     return rlp.encode(txRaw);
 };
 
+function range (start, stop, step){
+    if (typeof(stop) == 'undefined')
+    {
+        // one param defined
+        stop = start;
+        start = 0;
+    }
+    if (typeof(step) == 'undefined')
+    {
+        step = 1;
+    }
+    if ((step > 0 && start >= stop) || (step < 0 && start <= stop))
+    {
+        return [];
+    }
+    var result = [];
+    for (var i = start; step > 0 ? i < stop : i > stop; i += step)
+    {
+        result.push(i);
+    }
+    return result;
+}
+
+class Node {
+    constructor (data, left=false, right=false) {
+        this.data = data;
+        this.left = left;
+        this.right = right;
+    }
+}
+
+class FixedMerkle {
+    constructor (depth, leaves=[], hashed=false, web3) {
+        if(depth < 1)throw new Error("depth should be at least 1")
+        this.depth = depth;
+        this.leaf_count = Math.pow(2,depth);
+        this.hashed = hashed;
+        this.web3 = web3;
+        this.oldleaves = leaves;
+
+        if(leaves.length>this.leaf_count)
+            throw new Error("num of leaves exceed max avaiable num with the depth")
+
+        if(!this.hashed){
+            //
+        }
+
+        let fillArray = new Array(this.leaf_count - leaves.length);
+        fillArray.fill(new Buffer('0000000000000000000000000000000000000000000000000000000000000000', 'hex'))
+        this.leaves = leaves.concat(fillArray);
+        this.tree = [this.create_nodes(this.leaves)];
+        this.create_tree(this.tree[0]);
+    }
+
+    create_nodes (leaves) {
+        let nodeList = [];
+        for(let leaf of leaves) {
+            nodeList.push(new Node(leaf));
+        }
+
+        return nodeList;
+    }
+
+    create_tree (leaves) {
+        if(leaves.length == 1){
+            this.root = leaves[0].data;
+            return this.root;
+        }
+
+        let next_level = leaves.length;
+        let tree_level = [];
+        for(let i of range(0, next_level, 2)){
+            i = parseInt(i);
+            if(typeof leaves[i].data == "string")
+                leaves[i].data = new Buffer(leaves[i].data, 'hex')
+            if(typeof leaves[i+1].data == "string")
+                leaves[i+1].data = new Buffer(leaves[i+1].data, 'hex')
+            let combined = this.web3.utils.sha3(Buffer.concat([leaves[i].data,leaves[i + 1].data]));
+            combined = combined.replace('0x', '')
+            let next_node = new Node(combined, leaves[i], leaves[i + 1])
+            tree_level.push(next_node)
+        }
+
+        this.tree.push(tree_level)
+        this.create_tree(tree_level)
+    } 
+
+    create_membership_proof (leaf) {
+        if(!this.hashed)
+            leaf = this.web3.utils.sha3(leaf);
+        
+        let leavesHex = []
+        for(let value of this.oldleaves){
+            leavesHex.push(value.toString('hex'));
+        }
+        let index = leavesHex.indexOf(leaf);
+
+        let proof = new Buffer('');
+        let sibling_index = 0;
+        for(let i of range(0, this.depth, 1)){
+            if( index % 2 == 0){
+                sibling_index = index + 1;
+            }else{
+                sibling_index = index - 1
+            }
+
+            index = parseInt(index/2)
+            proof += this.tree[i][sibling_index].data.toString('hex')
+        }
+
+        return proof
+    }
+}
 
 class RootChainInfo {
     constructor({rootChain}) {
@@ -108,6 +221,14 @@ class Client {
         const rootChain = new this.web3.eth.Contract(RootChain, this.rootChainAddress);
         this.rootChain = rootChain;
         this.rootChainInfo = new RootChainInfo({rootChain});
+    }
+
+    createFixedMerkle (depth, leaves=[], hashed=false) {
+        let leavesHex = [];
+        for(let leaf of leaves){
+            leavesHex.push(new Buffer(leaf, 'hex'));
+        }
+        this.merkle = new FixedMerkle(depth, leavesHex, hashed, this.web3);
     }
 
     makeChildChainRpcRequest (method, params) {
