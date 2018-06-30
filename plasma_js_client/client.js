@@ -68,11 +68,11 @@ class FixedMerkle {
         let fillArray = new Array(this.leaf_count - leaves.length);
         fillArray.fill(new Buffer('0000000000000000000000000000000000000000000000000000000000000000', 'hex'))
         this.leaves = leaves.concat(fillArray);
-        this.tree = [this.create_nodes(this.leaves)];
-        this.create_tree(this.tree[0]);
+        this.tree = [this.createNodes(this.leaves)];
+        this.createTree(this.tree[0]);
     }
 
-    create_nodes (leaves) {
+    createNodes (leaves) {
         let nodeList = [];
         for(let leaf of leaves) {
             nodeList.push(new Node(leaf));
@@ -81,7 +81,7 @@ class FixedMerkle {
         return nodeList;
     }
 
-    create_tree (leaves) {
+    createTree (leaves) {
         if(leaves.length == 1){
             this.root = leaves[0].data;
             return this.root;
@@ -102,10 +102,10 @@ class FixedMerkle {
         }
 
         this.tree.push(tree_level)
-        this.create_tree(tree_level)
+        this.createTree(tree_level)
     } 
 
-    create_membership_proof (leaf) {
+    createMembershipProof (leaf) {
         if(!this.hashed)
             leaf = this.web3.utils.sha3(leaf);
         
@@ -222,15 +222,38 @@ class Client {
         this.rootChain = rootChain;
         this.rootChainInfo = new RootChainInfo({rootChain});
     }
+    
+    getTransactionMerkleHash (transaction) {
+        const [blknum1, txindex1, oindex1,
+            blknum2, txindex2, oindex2,
+            newowner1, contractaddress1, amount1, tokenid1,
+            newowner2, contractaddress2, amount2, tokenid2,
+            fee, expiretimestamp, salt,
+            sign1, sign2] = transaction;
+        const hash0 = this.hashTransaction([blknum1, txindex1, oindex1,
+            blknum2, txindex2, oindex2,
+            newowner1, contractaddress1, amount1, tokenid1,
+            newowner2, contractaddress2, amount2, tokenid2,
+            fee, expiretimestamp, salt]).substr(2);
+        const concatBuffer = Buffer.concat([new Buffer(hash0, 'hex'), sign1, sign2]);
+        const merkleHash = this.web3.utils.sha3(concatBuffer);
+        return merkleHash.substr(2);
+    }
 
     createFixedMerkle (depth, leaves=[], hashed=false) {
         let leavesHex = [];
         for(let leaf of leaves){
             leavesHex.push(new Buffer(leaf, 'hex'));
         }
-        this.merkle = new FixedMerkle(depth, leavesHex, hashed, this.web3);
+        return new FixedMerkle(depth, leavesHex, hashed, this.web3);
     }
-
+    
+    getBlockMerkle(block){
+        const transactions = block[0];
+        const hashedTransactions = transactions.map(transaction => this.getTransactionMerkleHash(transaction));
+        return this.createFixedMerkle (16, hashedTransactions, true);
+    }
+    
     makeChildChainRpcRequest (method, params) {
         return axios.post(this.fastXRpc, {
             "method": method,
@@ -238,6 +261,17 @@ class Client {
             "jsonrpc": "2.0",
             "id": 0
         });
+    };
+    
+    async getChildChainRpcResponse (method, params) {
+        let res = null;
+        try {
+            res = await this.makeChildChainRpcRequest(method, params);
+        } catch (error) {
+            console.error('Error ' + method + ', ', error);
+            return res;
+        }
+        return res.data.result;
     };
 
     hashTransaction (txRaw) {
@@ -303,11 +337,25 @@ class Client {
             );
     };
     
-    startExit(blknum, txindex, oindex, contractAddress, amount, tokenid, options={}) {
+    async startExit(blknum, txindex, oindex, contractAddress, amount, tokenid, options={}) {
         if (blknum % 1000 == 0) {
+            const currentChildBlock = await this.rootChainInfo.getCurrentChildBlock();
+            if (blknum >= currentChildBlock) {
+                throw new Error('Block has not submitted');
+            }
+            const block = await this.getBlock(blknum);
+            const transactions = block[0];
+            const transaction = transactions[txindex];
+            if(!transaction){
+                throw new Error('Transaction does not exist');
+            }
+            const txMerkleHash = this.getTransactionMerkleHash(transaction);
+            const blockMerkle = this.getBlockMerkle(block);
+            const proof = blockMerkle.createMembershipProof(txMerkleHash);
+            console.log(proof)
             throw new Error("normal exit not supported");
         } else {
-            return this.startDepositExit(blknum, txindex, oindex, contractAddress, amount, tokenid, options);
+            return await this.startDepositExit(blknum, txindex, oindex, contractAddress, amount, tokenid, options);
         }
     }
     
@@ -395,14 +443,7 @@ class Client {
 
     async getBalance (address, block="latest") {
         if (!address && this.defaultAccount) address = this.defaultAccount;
-        let res = null;
-        try {
-            res = await this.makeChildChainRpcRequest("get_balance", [address, block]);
-        } catch (error) {
-            console.error('Error getting balance, ', error);
-            return res;
-        }
-        return res.data.result;
+        return await this.getChildChainRpcResponse("get_balance", [address, block]);
     };
 
     async getEthBalance (address, block="latest") {
@@ -420,6 +461,24 @@ class Client {
     getAllUTXO (address, block="latest") {
         if (!address && this.defaultAccount) address = this.defaultAccount;
         return this.makeChildChainRpcRequest("get_utxo", [address, block]);
+    };
+    
+    decodeBlock (block_rlp) {
+        if (!block_rlp.startsWith("0x")) {
+            block_rlp = "0x" + block_rlp;
+        }
+        const block = rlp.decode(block_rlp);
+        return block;
+    }
+    
+    async getCurrentBlock () {
+        let block_rlp = await this.getChildChainRpcResponse("get_current_block", []);
+        return this.decodeBlock(block_rlp);
+    };
+    
+    async getBlock (blknum) {
+        const block_rlp = await this.getChildChainRpcResponse("get_block", [blknum]);
+        return this.decodeBlock(block_rlp);
     };
 
     async searchUTXO (search={}, options={}) {
