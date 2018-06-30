@@ -68,11 +68,11 @@ class FixedMerkle {
         let fillArray = new Array(this.leaf_count - leaves.length);
         fillArray.fill(new Buffer('0000000000000000000000000000000000000000000000000000000000000000', 'hex'))
         this.leaves = leaves.concat(fillArray);
-        this.tree = [this.create_nodes(this.leaves)];
-        this.create_tree(this.tree[0]);
+        this.tree = [this.createNodes(this.leaves)];
+        this.createTree(this.tree[0]);
     }
 
-    create_nodes (leaves) {
+    createNodes (leaves) {
         let nodeList = [];
         for(let leaf of leaves) {
             nodeList.push(new Node(leaf));
@@ -81,7 +81,7 @@ class FixedMerkle {
         return nodeList;
     }
 
-    create_tree (leaves) {
+    createTree (leaves) {
         if(leaves.length == 1){
             this.root = leaves[0].data;
             return this.root;
@@ -102,7 +102,7 @@ class FixedMerkle {
         }
 
         this.tree.push(tree_level)
-        this.create_tree(tree_level)
+        this.createTree(tree_level)
     } 
 
     createMembershipProof (leaf) {
