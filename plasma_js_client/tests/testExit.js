@@ -46,7 +46,15 @@ const testNormalExit = async () => {
         if (blknum % 1000 == 0) {
             console.log("UTXO", utxo);
             const depositPos = blknum * 1000000000 + txindex * 10000 + oindex;
-            console.log(depositPos, contractAddress, amount, tokenid)
+            console.log(depositPos, contractAddress, amount, tokenid);
+            while(1){
+                const currentChildBlock = await fastx.rootChainInfo.getCurrentChildBlock();
+                if (blknum < currentChildBlock) {
+                     break;
+                }
+                console.log("wait for block submit");
+                await sleep(1000);
+            }
             await fastx.startExit(blknum, txindex, oindex, contractAddress, amount, tokenid);
 /*
             console.log("startExit sent");

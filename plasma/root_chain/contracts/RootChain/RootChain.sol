@@ -151,16 +151,16 @@ contract RootChain {
         addExitToQueue(depositPos, msg.sender, contractAddress, amount, tokenId, childChain[blknum].created_at);
     }
 
-/*
-    function startFeeExit(uint256 amount)
-        public
-        isAuthority
-        returns (uint256)
-    {
-        addExitToQueue(currentFeeExit, msg.sender, amount, block.timestamp + 1);
-        currentFeeExit = currentFeeExit.add(1);
-    }
-*/
+//     function startFeeExit(uint256 amount)
+//         public
+//         isAuthority
+//         returns (uint256)
+//     {
+//         addExitToQueue(currentFeeExit, msg.sender, amount, block.timestamp + 1);
+//         currentFeeExit = currentFeeExit.add(1);
+//     }
+
+    event Test(address contractAddress, uint256 amount, uint256 tokenId, address exitor);
 
     // @dev Starts to exit a specified utxo
     // @param utxoPos The position of the exiting utxo in the format of blknum * 1000000000 + index * 10000 + oindex
@@ -174,15 +174,17 @@ contract RootChain {
         require(blknum % childBlockInterval == 0);
         uint256 txindex = (utxoPos % 1000000000) / 10000;
         uint256 oindex = utxoPos - blknum * 1000000000 - txindex * 10000;
-/*
-        var exitingTx = txBytes.createExitingTx(11, oindex);
+        var exitingTx = txBytes.createExitingTx(17, oindex);
+        
+        Test(exitingTx.contractAddress, exitingTx.amount, exitingTx.tokenId, exitingTx.exitor);
         
         require(msg.sender == exitingTx.exitor);
+/*
         bytes32 root = childChain[blknum].root; 
         bytes32 merkleHash = keccak256(keccak256(txBytes), ByteUtils.slice(sigs, 0, 130));
-        require(Validate.checkSigs(keccak256(txBytes), root, exitingTx.inputCount, sigs));
+//         require(Validate.checkSigs(keccak256(txBytes), root, exitingTx.inputCount, sigs));
         require(merkleHash.checkMembership(txindex, root, proof));
-        addExitToQueue(utxoPos, exitingTx.exitor, exitingTx.amount, childChain[blknum].created_at);
+        addExitToQueue(utxoPos, exitingTx.exitor, exitingTx.contractAddress, exitingTx.amount, exitingTx.tokenId, childChain[blknum].created_at);
 */
     }
 

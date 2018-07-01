@@ -21,9 +21,11 @@ library PlasmaRLP {
     }
 
     struct exitingTx {
+        address contractAddress;
         uint256 amount;
+        uint256 tokenId;
         address exitor;
-        uint256 inputCount;
+//         uint256 inputCount;
     }
 
     struct Iterator {
@@ -50,9 +52,11 @@ library PlasmaRLP {
     {
         var txList = toList(toRLPItem(exitingTxBytes), numItems);
         return exitingTx({
-            amount: toUint(txList[7 + 2 * oindex]),
-            exitor: toAddress(txList[6 + 2 * oindex]),
-            inputCount: toUint(txList[0]) * toUint(txList[3]) 
+            contractAddress: toAddress(txList[7 + 4 * oindex]),
+            amount: toUint(txList[8 + 4 * oindex]),
+            tokenId: toUint(txList[9 + 4 * oindex]),
+            exitor: toAddress(txList[6 + 4 * oindex])
+//             inputCount: toUint(txList[0]) * toUint(txList[3])
         });
     }
 

@@ -223,6 +223,34 @@ class Client {
         this.rootChainInfo = new RootChainInfo({rootChain});
     }
     
+    getTransactionRlp (transaction, flag) {
+        const [blknum1, txindex1, oindex1,
+            blknum2, txindex2, oindex2,
+            newowner1, contractaddress1, amount1, tokenid1,
+            newowner2, contractaddress2, amount2, tokenid2,
+            fee, expiretimestamp, salt,
+            sign1, sign2] = transaction;
+        let signTx;
+        if (flag == 1){
+            signTx = [blknum1, txindex1, oindex1,
+            newowner1, contractaddress1, amount1, tokenid1,
+            contractaddress2, amount2, tokenid2,
+            fee, expiretimestamp, salt];
+        } else if (flag == 2) {
+            signTx = [blknum2, txindex2, oindex2,
+            contractaddress1, amount1, tokenid1,
+            newowner2, contractaddress2, amount2, tokenid2,
+            fee, expiretimestamp, salt];
+        } else {
+            signTx = [blknum1, txindex1, oindex1,
+            blknum2, txindex2, oindex2,
+            newowner1, contractaddress1, amount1, tokenid1,
+            newowner2, contractaddress2, amount2, tokenid2,
+            fee, expiretimestamp, salt];
+        }
+        return rlp.encode(signTx).toString('hex');
+    }
+    
     getTransactionMerkleHash (transaction) {
         const [blknum1, txindex1, oindex1,
             blknum2, txindex2, oindex2,
@@ -338,6 +366,11 @@ class Client {
     };
     
     async startExit(blknum, txindex, oindex, contractAddress, amount, tokenid, options={}) {
+        let account = options.from;
+        if (!account) {
+            if (this.defaultAccount) account = this.defaultAccount;
+            else throw new Error('No default account specified!');
+        }
         if (blknum % 1000 == 0) {
             const currentChildBlock = await this.rootChainInfo.getCurrentChildBlock();
             if (blknum >= currentChildBlock) {
@@ -352,8 +385,26 @@ class Client {
             const txMerkleHash = this.getTransactionMerkleHash(transaction);
             const blockMerkle = this.getBlockMerkle(block);
             const proof = blockMerkle.createMembershipProof(txMerkleHash);
-            console.log(proof)
-            throw new Error("normal exit not supported");
+            
+            const depositPos = blknum * 1000000000 + txindex * 10000 + oindex;
+            const transactionRlp = this.getTransactionRlp(transaction, 0);
+
+            if (this.debug)
+                console.log("startExit " +
+                    ", depositPos: " + depositPos +
+                    ", transactionRlp: " + transactionRlp +
+                    ", proof: " + proof);
+
+            let transact = {from: account, gas: 3894132};
+            return this.rootChain.methods.startExit(
+                    depositPos, "0x" + transactionRlp, "0x" + proof, "0x"
+                ).send(
+                    transact
+                ).on('transactionHash',
+                    (hash) => {
+                        if (this.debug) console.log(hash);
+                    }
+                );
         } else {
             return await this.startDepositExit(blknum, txindex, oindex, contractAddress, amount, tokenid, options);
         }
