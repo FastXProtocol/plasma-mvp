@@ -160,7 +160,7 @@ contract RootChain {
 //         currentFeeExit = currentFeeExit.add(1);
 //     }
 
-    event Test(address contractAddress, uint256 amount, uint256 tokenId, address exitor);
+    event Test(address contractAddress, uint256 amount, uint256 tokenId, address exitor, address sender);
 
     // @dev Starts to exit a specified utxo
     // @param utxoPos The position of the exiting utxo in the format of blknum * 1000000000 + index * 10000 + oindex
@@ -174,9 +174,9 @@ contract RootChain {
         require(blknum % childBlockInterval == 0);
         uint256 txindex = (utxoPos % 1000000000) / 10000;
         uint256 oindex = utxoPos - blknum * 1000000000 - txindex * 10000;
-        var exitingTx = txBytes.createExitingTx(17, oindex);
+        var exitingTx = txBytes.createExitingTx(oindex);
         
-        Test(exitingTx.contractAddress, exitingTx.amount, exitingTx.tokenId, exitingTx.exitor);
+        Test(exitingTx.contractAddress, exitingTx.amount, exitingTx.tokenId, exitingTx.exitor, msg.sender);
         
         require(msg.sender == exitingTx.exitor);
 /*
@@ -218,7 +218,7 @@ contract RootChain {
     function challengeExit(uint256 cUtxoPos, uint256 eUtxoIndex, bytes txBytes, bytes proof, bytes sigs, bytes confirmationSig)
         public
     {
-        uint256 eUtxoPos = txBytes.getUtxoPos(11, eUtxoIndex);
+        uint256 eUtxoPos = txBytes.getUtxoPos(eUtxoIndex);
         uint256 txindex = (cUtxoPos % 1000000000) / 10000;
         bytes32 root = childChain[cUtxoPos / 1000000000].root;
         var txHash = keccak256(txBytes);
