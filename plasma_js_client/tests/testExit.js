@@ -2,14 +2,19 @@ import fastx, {ownerAddress} from "./config";
 import {getUTXOs, logBalance, sleep} from "./utils";
 
 
+const wei2eth = (wei) => {
+    return fastx.web3.utils.fromWei(""+wei, 'ether')
+}
+
+
 const testDepositExit = async (depositContractAddress, depositAmount, depositTokenId) => {
     console.log("testStartDepositExit");
     const firstEthBalance = await fastx.web3.eth.getBalance(ownerAddress);
-    console.log("firstEthBalance", firstEthBalance);
+    console.log("firstEthBalance", wei2eth(firstEthBalance));
     await fastx.deposit(depositContractAddress, depositAmount, depositTokenId);
     await sleep(1000);
     const depositedEthBalance = await fastx.web3.eth.getBalance(ownerAddress);
-    console.log("depositedEthBalance", depositedEthBalance, depositedEthBalance - firstEthBalance);
+    console.log("depositedEthBalance", wei2eth(depositedEthBalance), wei2eth(depositedEthBalance - firstEthBalance));
     console.log("root chain info: ", await fastx.rootChainInfo.getInfo());
     const utxos = await getUTXOs();
     for(const utxo of utxos){
@@ -25,7 +30,7 @@ const testDepositExit = async (depositContractAddress, depositAmount, depositTok
             await logBalance(ownerAddress);
             await sleep(3000);
             const finalEthBalance = await fastx.web3.eth.getBalance(ownerAddress);
-            console.log("finalEthBalance", finalEthBalance, finalEthBalance - firstEthBalance);
+            console.log("finalEthBalance", wei2eth(finalEthBalance), wei2eth(finalEthBalance - firstEthBalance));
             break;
         }
     }
@@ -35,7 +40,7 @@ const testDepositExit = async (depositContractAddress, depositAmount, depositTok
 const testNormalExit = async () => {
     console.log("testStartDepositExit");
     const firstEthBalance = await fastx.web3.eth.getBalance(ownerAddress);
-    console.log("firstEthBalance", firstEthBalance);
+    console.log("firstEthBalance", wei2eth(firstEthBalance));
     await fastx.deposit("0x0", 1000000000000000000, 0);
     await sleep(1000);
     await fastx.sendEth(ownerAddress, 1000000000000000000 * 0.7, {from:ownerAddress});
@@ -56,15 +61,13 @@ const testNormalExit = async () => {
                 await sleep(1000);
             }
             await fastx.startExit(blknum, txindex, oindex, contractAddress, amount, tokenid);
-/*
             console.log("startExit sent");
             console.log("root chain info: ", await fastx.rootChainInfo.getInfo());
             await sleep(1000);
             await logBalance(ownerAddress);
             await sleep(3000);
             const finalEthBalance = await fastx.web3.eth.getBalance(ownerAddress);
-            console.log("finalEthBalance", finalEthBalance, finalEthBalance - firstEthBalance);
-*/
+            console.log("finalEthBalance", wei2eth(finalEthBalance), wei2eth(finalEthBalance - firstEthBalance));
             break;
         }
     }

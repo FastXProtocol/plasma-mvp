@@ -267,6 +267,17 @@ class Client {
         const merkleHash = this.web3.utils.sha3(concatBuffer);
         return merkleHash.substr(2);
     }
+    
+    getTransactionSigs (transaction) {
+        const [blknum1, txindex1, oindex1,
+            blknum2, txindex2, oindex2,
+            newowner1, contractaddress1, amount1, tokenid1,
+            newowner2, contractaddress2, amount2, tokenid2,
+            fee, expiretimestamp, salt,
+            sign1, sign2] = transaction;
+        const concatBuffer = Buffer.concat([sign1, sign2]);
+        return concatBuffer.toString('hex');
+    }
 
     createFixedMerkle (depth, leaves=[], hashed=false) {
         let leavesHex = [];
@@ -388,16 +399,18 @@ class Client {
             
             const depositPos = blknum * 1000000000 + txindex * 10000 + oindex;
             const transactionRlp = this.getTransactionRlp(transaction, 0);
+            const txSigs = this.getTransactionSigs(transaction);
 
             if (this.debug)
                 console.log("startExit " +
                     ", depositPos: " + depositPos +
                     ", transactionRlp: " + transactionRlp +
-                    ", proof: " + proof);
+                    ", proof: " + proof + 
+                    ", sigs: " + txSigs);
 
             let transact = {from: account, gas: 3894132};
             return this.rootChain.methods.startExit(
-                    depositPos, "0x" + transactionRlp, "0x" + proof, "0x"
+                    depositPos, "0x" + transactionRlp, "0x" + proof, "0x" + txSigs
                 ).send(
                     transact
                 ).on('transactionHash',

@@ -179,13 +179,11 @@ contract RootChain {
         Test(exitingTx.contractAddress, exitingTx.amount, exitingTx.tokenId, exitingTx.exitor, msg.sender);
         
         require(msg.sender == exitingTx.exitor);
-/*
         bytes32 root = childChain[blknum].root; 
         bytes32 merkleHash = keccak256(keccak256(txBytes), ByteUtils.slice(sigs, 0, 130));
 //         require(Validate.checkSigs(keccak256(txBytes), root, exitingTx.inputCount, sigs));
         require(merkleHash.checkMembership(txindex, root, proof));
         addExitToQueue(utxoPos, exitingTx.exitor, exitingTx.contractAddress, exitingTx.amount, exitingTx.tokenId, childChain[blknum].created_at);
-*/
     }
 
     // Priority is a given utxos position in the exit priority queue
