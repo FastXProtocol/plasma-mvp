@@ -160,8 +160,6 @@ contract RootChain {
 //         currentFeeExit = currentFeeExit.add(1);
 //     }
 
-    event Test(address contractAddress, uint256 amount, uint256 tokenId, address exitor, address sender);
-
     // @dev Starts to exit a specified utxo
     // @param utxoPos The position of the exiting utxo in the format of blknum * 1000000000 + index * 10000 + oindex
     // @param txBytes The transaction being exited in RLP bytes format
@@ -175,8 +173,6 @@ contract RootChain {
         uint256 txindex = (utxoPos % 1000000000) / 10000;
         uint256 oindex = utxoPos - blknum * 1000000000 - txindex * 10000;
         var exitingTx = txBytes.createExitingTx(oindex);
-        
-        Test(exitingTx.contractAddress, exitingTx.amount, exitingTx.tokenId, exitingTx.exitor, msg.sender);
         
         require(msg.sender == exitingTx.exitor);
         bytes32 root = childChain[blknum].root; 
