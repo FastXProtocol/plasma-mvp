@@ -176,7 +176,8 @@ contract RootChain {
         
         require(msg.sender == exitingTx.exitor);
         bytes32 root = childChain[blknum].root; 
-        bytes32 merkleHash = keccak256(keccak256(txBytes), ByteUtils.slice(sigs, 0, 130));
+//         bytes32 merkleHash = keccak256(keccak256(txBytes), ByteUtils.slice(sigs, 0, 130));
+        bytes32 merkleHash = keccak256(keccak256(txBytes), sigs);
 //         require(Validate.checkSigs(keccak256(txBytes), root, exitingTx.inputCount, sigs));
         require(merkleHash.checkMembership(txindex, root, proof));
         addExitToQueue(utxoPos, exitingTx.exitor, exitingTx.contractAddress, exitingTx.amount, exitingTx.tokenId, childChain[blknum].created_at);
@@ -245,7 +246,7 @@ contract RootChain {
                 erc721Contract.transferFrom(address(this), currentExit.owner, currentExit.tokenId);
             }else{
                 ERC20 erc20Contract = ERC20(currentExit.contractAddress);
-                erc20Contract.transferFrom(address(this), currentExit.owner, currentExit.amount);
+                erc20Contract.transfer(currentExit.owner, currentExit.amount);
             }
             
             exitsQueue.delMin();
