@@ -1,5 +1,6 @@
 import fastx, {ownerAddress, erc20ContractAddress, erc20Contract, erc721ContractAddress, erc721Contract} from "./config";
 import {getUTXOs, logBalance, sleep} from "./utils";
+import normalizeAddress from "../utils/normalizeAddress";
 
 
 const wei2eth = (wei) => {
@@ -28,18 +29,11 @@ const testDepositExit = async (depositContractAddress, depositAmount, depositTok
 };
 
 
-const testNormalExit = async () => {
-    console.log("testStartNormalExit");
-    const firstEthBalance = await fastx.web3.eth.getBalance(ownerAddress);
-    console.log("firstEthBalance", wei2eth(firstEthBalance));
-    await fastx.deposit("0x0", 1000000000000000000, 0);
-    await sleep(1000);
-    await fastx.sendEth(ownerAddress, 1000000000000000000 * 0.7, {from:ownerAddress});
-    await sleep(500);
+const normalExit = async (exitContractAddress) => {
     const utxos = await getUTXOs();
     for(const utxo of utxos){
         const [blknum, txindex, oindex, contractAddress, amount, tokenid] = utxo;
-        if (blknum % 1000 == 0) {
+        if (blknum % 1000 == 0 && normalizeAddress(contractAddress).toString("hex") == normalizeAddress(exitContractAddress).toString("hex")) {
             console.log("UTXO", utxo);
             while(1){
                 const currentChildBlock = await fastx.rootChainInfo.getCurrentChildBlock();
@@ -50,16 +44,11 @@ const testNormalExit = async () => {
                 await sleep(1000);
             }
             await fastx.startExit(blknum, txindex, oindex, contractAddress, amount, tokenid);
-            console.log("root chain info: ", await fastx.rootChainInfo.getInfo());
-            await sleep(1000);
-            await logBalance(ownerAddress);
-            await sleep(3000);
-            const finalEthBalance = await fastx.web3.eth.getBalance(ownerAddress);
-            console.log("finalEthBalance", wei2eth(finalEthBalance), wei2eth(finalEthBalance - firstEthBalance));
-            break;
+            return;
         }
     }
-};
+    throw new Error("no available utxo");
+}
 
 
 const testExit = async () => {
@@ -87,7 +76,19 @@ const testExit = async () => {
     console.log("finalBalance", await erc721Contract.methods.ownerOf(888).call());
 
     console.log("---------- Eth Normal Exit ----------");
-    await testNormalExit();
+    const firstEthBalance = await fastx.web3.eth.getBalance(ownerAddress);
+    console.log("firstEthBalance", wei2eth(firstEthBalance));
+    await fastx.deposit("0x0", 1000000000000000000, 0);
+    await sleep(1000);
+    await fastx.sendEth(ownerAddress, 1000000000000000000 * 0.7, {from:ownerAddress});
+    await sleep(500);
+    await normalExit("0x0");
+    console.log("root chain info: ", await fastx.rootChainInfo.getInfo());
+    await sleep(1000);
+    await logBalance(ownerAddress);
+    await sleep(3000);
+    const finalEthBalance = await fastx.web3.eth.getBalance(ownerAddress);
+    console.log("finalEthBalance", wei2eth(finalEthBalance), wei2eth(finalEthBalance - firstEthBalance));
 };
 
 
