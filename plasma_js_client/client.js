@@ -105,9 +105,30 @@ class FixedMerkle {
         this.createTree(tree_level)
     } 
 
+    checkMembership (leaf, index, proof){
+        // if(!this.hashed)
+        //     leaf = this.web3.utils.sha3(leaf);
+        proof = new Buffer(proof, 'hex');
+        let computedHash = leaf;
+        let segment;
+        for(let i of range(0, this.depth * 32, 32)){
+            segment = proof.slice(i, i+32);
+            computedHash = new Buffer(computedHash, 'hex');
+            if( index % 2 == 0 ) {
+                computedHash = this.web3.utils.sha3(Buffer.concat([computedHash,segment]))
+            }else{
+                computedHash = this.web3.utils.sha3(Buffer.concat([segment,computedHash]))
+            }
+            index = parseInt(index/2)
+            computedHash = computedHash.replace('0x', '');
+        }
+
+        return computedHash == this.root
+    }
+
     createMembershipProof (leaf) {
-        if(!this.hashed)
-            leaf = this.web3.utils.sha3(leaf);
+        // if(!this.hashed)
+        //     leaf = this.web3.utils.sha3(leaf);
         
         let leavesHex = []
         for(let value of this.oldleaves){
@@ -115,17 +136,21 @@ class FixedMerkle {
         }
         let index = leavesHex.indexOf(leaf);
 
+        if (index == -1) {
+            throw new Error('leaf is not in the merkle tree')
+        }
+
         let proof = new Buffer('');
         let sibling_index = 0;
         for(let i of range(0, this.depth, 1)){
             if( index % 2 == 0){
                 sibling_index = index + 1;
             }else{
-                sibling_index = index - 1
+                sibling_index = index - 1;
             }
 
-            index = parseInt(index/2)
-            proof += this.tree[i][sibling_index].data.toString('hex')
+            index = parseInt(index/2);
+            proof += this.tree[i][sibling_index].data.toString('hex');
         }
 
         return proof
