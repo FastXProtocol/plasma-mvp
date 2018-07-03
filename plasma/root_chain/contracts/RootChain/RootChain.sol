@@ -246,7 +246,7 @@ contract RootChain {
                 erc721Contract.transferFrom(address(this), currentExit.owner, currentExit.tokenId);
             }else{
                 ERC20 erc20Contract = ERC20(currentExit.contractAddress);
-                erc20Contract.transferFrom(address(this), currentExit.owner, currentExit.amount);
+                erc20Contract.transfer(currentExit.owner, currentExit.amount);
             }
             
             exitsQueue.delMin();
