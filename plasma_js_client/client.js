@@ -7,7 +7,7 @@ import Account from "eth-lib/lib/account";
 import RootChain from "../contract_data/RootChain.abi";
 import Erc20Interface from "../contract_data/ERC20.abi";
 import Erc721Interface from "../contract_data/ERC721Basic.abi";
-
+import Erc721TokenInterface from "../contract_data/ERC721Token.abi";
 
 export const root = (typeof self === 'object' && self.self === self && self) ||
   (typeof global === 'object' && global.global === global && global) ||
@@ -497,6 +497,10 @@ class Client {
     
     getErc721Interface (contractAddress) {
         return new this.web3.eth.Contract(Erc721Interface, contractAddress);
+    };
+
+    getErc721TokenInterface (contractAddress) {
+        return new this.web3.eth.Contract(Erc721TokenInterface, contractAddress);
     };
     
     approve (contractAddress, amount, tokenid, options={}) {
