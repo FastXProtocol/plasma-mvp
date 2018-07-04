@@ -1,3 +1,5 @@
+from functools import wraps
+
 from werkzeug.wrappers import Request, Response
 from werkzeug.serving import run_simple
 from jsonrpc import JSONRPCResponseManager, dispatcher
@@ -13,6 +15,16 @@ partially_signed_transaction_pool = PartiallySignedTransactionPool()
 child_chain = ChildChain(plasma_config['AUTHORITY'], root_chain, partially_signed_transaction_pool=partially_signed_transaction_pool)
 BlockAutoSubmitter(child_chain, plasma_config['BLOCK_AUTO_SUMBITTER_INTERVAL']).start()
 FinalizeExitsAutoSubmitter(plasma_config['AUTHORITY'], root_chain, plasma_config['FINALIZE_EXITS_AUTO_SUBMITTER_INTERVAL']).start()
+
+
+def printKey(key):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            print("Dispatcher: " + key)
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 @Request.application
@@ -34,6 +46,9 @@ def application(request):
     dispatcher["eth_getBlockByNumber"] = lambda block, deep: child_chain.get_block_by_num(block, deep)
     dispatcher["net_version"] = lambda: child_chain.get_version()
     dispatcher["eth_sendRawTransaction"] = lambda raw_tx: child_chain.eth_raw_transaction(raw_tx)
+    
+    for key in dispatcher.keys():
+        dispatcher[key] = printKey(key)(dispatcher[key])
 
     response = JSONRPCResponseManager.handle(
         request.data, dispatcher)

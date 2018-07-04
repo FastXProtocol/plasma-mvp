@@ -29,6 +29,19 @@ const testDepositExit = async (depositContractAddress, depositAmount, depositTok
 };
 
 
+const getDepositUtxo = async (depositContractAddress) => {
+    const utxos = await getUTXOs();
+    for(const utxo of utxos){
+        const [blknum, txindex, oindex, contractAddress, amount, tokenid] = utxo;
+        if (blknum % 1000 != 0 && normalizeAddress(contractAddress).toString("hex") == normalizeAddress(depositContractAddress).toString("hex")) {
+            console.log("UTXO", utxo);
+            return utxo;
+        }
+    }
+    throw new Error("no available utxo");
+}
+
+
 const normalExit = async (exitContractAddress) => {
     const utxos = await getUTXOs();
     for(const utxo of utxos){
@@ -51,30 +64,39 @@ const normalExit = async (exitContractAddress) => {
 }
 
 
-const testExit = async () => {
+const testEthDepositExit = async () => {
     console.log("---------- Eth Deposit Exit ----------");
-    let firstBalance = await fastx.web3.eth.getBalance(ownerAddress);
+    const firstBalance = await fastx.web3.eth.getBalance(ownerAddress);
     console.log("firstBalance", firstBalance);
     await testDepositExit("0x0", 1000000000000000000, 0);
-    let finalBalance = await fastx.web3.eth.getBalance(ownerAddress);
+    const finalBalance = await fastx.web3.eth.getBalance(ownerAddress);
     console.log("finalBalance", wei2eth(finalBalance), wei2eth(finalBalance - firstBalance));
+}
 
+
+const testErc20DepositExit = async () => {
     console.log("---------- ERC20 Deposit Exit ----------");
-    firstBalance = await erc20Contract.methods.balanceOf(ownerAddress).call();
+    const firstBalance = await erc20Contract.methods.balanceOf(ownerAddress).call();
     console.log("firstBalance", firstBalance);
     await fastx.approve(erc20ContractAddress, 100, 0);
     await testDepositExit(erc20ContractAddress, 100, 0);
     await sleep(500);
-    finalBalance = await erc20Contract.methods.balanceOf(ownerAddress).call();
+    const finalBalance = await erc20Contract.methods.balanceOf(ownerAddress).call();
     console.log("finalBalance", finalBalance, finalBalance - firstBalance);
+}
 
+
+const testErc721DepositExit = async () => {
     console.log("---------- ERC721 Deposit Exit ----------");
     console.log("firstBalance", await erc721Contract.methods.ownerOf(888).call());
     await fastx.approve(erc721ContractAddress, 0, 888);
     await testDepositExit(erc721ContractAddress, 0, 888);
     await sleep(500);
     console.log("finalBalance", await erc721Contract.methods.ownerOf(888).call());
+}
 
+
+const testEthNormalExit = async () => {
     console.log("---------- Eth Normal Exit ----------");
     const firstEthBalance = await fastx.web3.eth.getBalance(ownerAddress);
     console.log("firstEthBalance", wei2eth(firstEthBalance));
@@ -89,6 +111,66 @@ const testExit = async () => {
     await sleep(3000);
     const finalEthBalance = await fastx.web3.eth.getBalance(ownerAddress);
     console.log("finalEthBalance", wei2eth(finalEthBalance), wei2eth(finalEthBalance - firstEthBalance));
+}
+
+
+const testErc20NormalExit = async () => {
+    console.log("---------- ERC20 Normal Exit ----------");
+    const firstBalance = await erc20Contract.methods.balanceOf(ownerAddress).call();
+    console.log("firstBalance", firstBalance);
+    await fastx.approve(erc20ContractAddress, 100, 0);
+    await fastx.deposit(erc20ContractAddress, 100, 0);
+    await sleep(1000);
+    const erc20Utxo = await getDepositUtxo(erc20ContractAddress);
+    await fastx.sendTransaction (erc20Utxo[0], erc20Utxo[1], erc20Utxo[2],
+       0, 0, 0,
+       ownerAddress, erc20ContractAddress, 1, 0,
+       ownerAddress, erc20ContractAddress, erc20Utxo[4] - 1, 0,
+       0, null, null,
+       ownerAddress, ownerAddress
+    );
+    await sleep(1000);
+    await normalExit(erc20ContractAddress);
+    console.log("root chain info: ", await fastx.rootChainInfo.getInfo());
+    await sleep(1000);
+    await logBalance(ownerAddress);
+    await sleep(3000);
+    const finalBalance = await erc20Contract.methods.balanceOf(ownerAddress).call();
+    console.log("finalBalance", finalBalance, finalBalance - firstBalance);
+}
+
+
+const testErc721NormalExit = async () => {
+    console.log("---------- ERC721 Normal Exit ----------");
+    console.log("firstBalance", await erc721Contract.methods.ownerOf(888).call());
+    await fastx.approve(erc721ContractAddress, 0, 888);
+    await fastx.deposit(erc721ContractAddress, 0, 888);
+    await sleep(1000);
+    const erc721Utxo = await getDepositUtxo(erc721ContractAddress);
+    await fastx.sendTransaction (erc721Utxo[0], erc721Utxo[1], erc721Utxo[2],
+       0, 0, 0,
+       ownerAddress, erc721ContractAddress, 0, erc721Utxo[5],
+       "0x0", "0x0", 0, 0,
+       0, null, null,
+       ownerAddress, ownerAddress
+    );
+    await sleep(1000);
+    await normalExit(erc721ContractAddress);
+    console.log("root chain info: ", await fastx.rootChainInfo.getInfo());
+    await sleep(1000);
+    await logBalance(ownerAddress);
+    await sleep(3000);
+    console.log("finalBalance", await erc721Contract.methods.ownerOf(888).call());
+}
+
+
+const testExit = async () => {
+    await testEthDepositExit();
+    await testErc20DepositExit();
+    await testErc721DepositExit();
+    await testEthNormalExit();
+    await testErc20NormalExit();
+    await testErc721NormalExit();
 };
 
 
