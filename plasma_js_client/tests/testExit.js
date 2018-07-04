@@ -140,12 +140,37 @@ const testErc20NormalExit = async () => {
 }
 
 
+const testErc721NormalExit = async () => {
+    console.log("---------- ERC721 Normal Exit ----------");
+    console.log("firstBalance", await erc721Contract.methods.ownerOf(888).call());
+    await fastx.approve(erc721ContractAddress, 0, 888);
+    await fastx.deposit(erc721ContractAddress, 0, 888);
+    await sleep(1000);
+    const erc721Utxo = await getDepositUtxo(erc721ContractAddress);
+    await fastx.sendTransaction (erc721Utxo[0], erc721Utxo[1], erc721Utxo[2],
+       0, 0, 0,
+       ownerAddress, erc721ContractAddress, 0, erc721Utxo[5],
+       "0x0", "0x0", 0, 0,
+       0, null, null,
+       ownerAddress, ownerAddress
+    );
+    await sleep(1000);
+    await normalExit(erc721ContractAddress);
+    console.log("root chain info: ", await fastx.rootChainInfo.getInfo());
+    await sleep(1000);
+    await logBalance(ownerAddress);
+    await sleep(3000);
+    console.log("finalBalance", await erc721Contract.methods.ownerOf(888).call());
+}
+
+
 const testExit = async () => {
     await testEthDepositExit();
     await testErc20DepositExit();
     await testErc721DepositExit();
     await testEthNormalExit();
     await testErc20NormalExit();
+    await testErc721NormalExit();
 };
 
 
