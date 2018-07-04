@@ -53,19 +53,19 @@ const normalExit = async (exitContractAddress) => {
 
 const testExit = async () => {
     console.log("---------- Eth Deposit Exit ----------");
-    const firstBalance = await fastx.web3.eth.getBalance(ownerAddress);
+    let firstBalance = await fastx.web3.eth.getBalance(ownerAddress);
     console.log("firstBalance", firstBalance);
     await testDepositExit("0x0", 1000000000000000000, 0);
-    const finalBalance = await fastx.web3.eth.getBalance(ownerAddress);
+    let finalBalance = await fastx.web3.eth.getBalance(ownerAddress);
     console.log("finalBalance", wei2eth(finalBalance), wei2eth(finalBalance - firstBalance));
 
     console.log("---------- ERC20 Deposit Exit ----------");
-    const firstBalance = await erc20Contract.methods.balanceOf(ownerAddress).call();
+    firstBalance = await erc20Contract.methods.balanceOf(ownerAddress).call();
     console.log("firstBalance", firstBalance);
     await fastx.approve(erc20ContractAddress, 100, 0);
     await testDepositExit(erc20ContractAddress, 100, 0);
     await sleep(500);
-    const finalBalance = await erc20Contract.methods.balanceOf(ownerAddress).call();
+    finalBalance = await erc20Contract.methods.balanceOf(ownerAddress).call();
     console.log("finalBalance", finalBalance, finalBalance - firstBalance);
 
     console.log("---------- ERC721 Deposit Exit ----------");
