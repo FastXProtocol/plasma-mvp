@@ -1095,6 +1095,26 @@ class Client {
             }
         }
     };
+    
+    createLoginString(appName) {
+        return appName + "_" + Math.floor((0.1 + 0.9 * Math.random()) * Math.pow(10, 10));
+    };
+    
+    async signLoginString(loginString, address) {
+        if(address == null){
+            address = this.defaultAccount;
+        }
+        return await this.sign(this.web3.utils.sha3(loginString), address);
+    };
+    
+    getLoginAddress(loginString, sign) {
+        return Account.recover(this.web3.utils.sha3(loginString), sign);
+    };
+    
+    checkLoginString(loginString, sign, address) {
+        return loginString && sign && address &&
+            this.getLoginAddress(loginString, sign).toLowerCase() == address.toLowerCase();
+    };
 }
 
 export default Client;

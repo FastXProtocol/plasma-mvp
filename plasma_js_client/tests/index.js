@@ -21,7 +21,7 @@ const runTest = async(testId) => {
         console.log(testId + " failed");
         return;
     }
-    console.log(testId + " finished successfully");
+    console.log(testId + " finished");
 };
 
 const runTests = async(testIds) => {
