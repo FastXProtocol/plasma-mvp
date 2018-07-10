@@ -20,7 +20,7 @@ if (process.env.ENV == "LOCAL") {
         ...options,
         gethRpc: "http://localhost:8545",
         fastXRpc: "http://fastx-rinkeby.msan.cn/jsonrpc",
-        rootChainAddress: "0xC47e711ac6A3D16Db0826c404d8C5d8bDC01d7b1",
+        rootChainAddress: "0xffc5DE2513F5F256dB660CDd566D6C54fBa90405",
         defaultAccount: "0xd103C64735B324161518F17CeF15D1E27e0b9F3E",
     }
 }
