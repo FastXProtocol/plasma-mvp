@@ -167,9 +167,9 @@ class RootChainInfo {
                 return this.makeRootChainCall(property);
             }
         });
-        this.simplePublicFunctions.forEach(property => {
-            this[property] = () => {
-                return this.makeRootChainCall(property);
+        [...this.simplePublicFunctions, "getChildChain", "getExit"].forEach(property => {
+            this[property] = (...params) => {
+                return this.makeRootChainCall(property, params);
             }
         });
     }
@@ -342,6 +342,10 @@ class Client {
         let txEncoded = encodeTransaction(txRaw);
         return this.web3.utils.sha3(txEncoded);
     };
+    
+    getUtxoPos (blknum, txindex, oindex) {
+        return blknum * 1000000000 + txindex * 10000 + oindex;
+    }
 
     sign (hash, address) {
         if (root.process){
@@ -422,7 +426,7 @@ class Client {
             const blockMerkle = this.getBlockMerkle(block);
             const proof = blockMerkle.createMembershipProof(txMerkleHash);
             
-            const depositPos = blknum * 1000000000 + txindex * 10000 + oindex;
+            const depositPos = this.getUtxoPos(blknum, txindex, oindex);
             const transactionRlp = this.getTransactionRlp(transaction, 0);
             const txSigs = this.getTransactionSigs(transaction);
 
@@ -454,7 +458,7 @@ class Client {
             if (this.defaultAccount) account = this.defaultAccount;
             else throw new Error('No default account specified!');
         }
-        const depositPos = blknum * 1000000000 + txindex * 10000 + oindex;
+        const depositPos = this.getUtxoPos(blknum, txindex, oindex);
         if (this.debug)
             console.log("startDepositExit " +
                 ", depositPos: " + depositPos +

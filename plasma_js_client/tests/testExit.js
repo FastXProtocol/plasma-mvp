@@ -20,9 +20,11 @@ const testDepositExit = async (depositContractAddress, depositAmount, depositTok
             console.log("UTXO", utxo);
             await fastx.startExit(blknum, txindex, oindex, contractAddress, amount, tokenid);
             console.log("root chain info: ", await fastx.rootChainInfo.getInfo());
+            console.log("get exit", await fastx.rootChainInfo.getExit(fastx.getUtxoPos(blknum, txindex, oindex)))
             await sleep(1000);
             await logBalance(ownerAddress);
             await sleep(3000);
+            console.log("get exit", await fastx.rootChainInfo.getExit(fastx.getUtxoPos(blknum, txindex, oindex)))
             break;
         }
     }
