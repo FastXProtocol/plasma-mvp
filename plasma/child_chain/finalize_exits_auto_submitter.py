@@ -16,7 +16,7 @@ class FinalizeExitsAutoSubmitter(Thread):
         except Exception as e:
             return
         if ttime() > exitable_at:
-            self.root_chain.transact({'from': '0x' + self.authority.hex()}).finalizeExits()
+            self.root_chain.transact({'from': '0x' + self.authority.hex(), "gas": 300000}).finalizeExits()
             print("finalize exit, triggered by %s %s" % (utxo_pos, exitable_at))
 
     def run(self):
