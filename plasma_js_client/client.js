@@ -714,9 +714,9 @@ class Client {
             sign1 = sign1.substr(2);
             sign2 = sign2.substr(2);
             let txRawWithKeys = txRaw.concat([new Buffer(sign1, 'hex'), new Buffer(sign2, 'hex')]);
-            if (this.debug) console.log('\nTxRaw: ', txRawWithKeys);
+//             if (this.debug) console.log('\nTxRaw: ', txRawWithKeys);
             let txEncoded = rlp.encode(txRawWithKeys);
-            if (this.debug) console.log("sending transaction ...");
+//             if (this.debug) console.log("sending transaction ...");
             return this.makeChildChainRpcRequest("apply_transaction", [txEncoded.toString('hex')]);
         }
         

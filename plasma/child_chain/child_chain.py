@@ -92,7 +92,7 @@ class ChildChain(object):
         self.save()
     
     def challenge_exit(self):
-        print("Challenge Exit")
+        print("\n\n>>>>>>>>>> Challenge Exit <<<<<<<<<<\n\n")
         pass
     
     def apply_exit_start(self, event):
@@ -122,11 +122,15 @@ class ChildChain(object):
                 transaction.amount1 != amount or \
                 transaction.tokenid1 != tokenid:
                 return self.challenge_exit()
+            if transaction.spent1:
+                return self.challenge_exit()
         else:
             if utils.normalize_address(transaction.newowner2) != utils.normalize_address(exitor) or \
                 utils.normalize_address(transaction.contractaddress2) != utils.normalize_address(contractaddress) or \
                 transaction.amount2 != amount or \
                 transaction.tokenid2 != tokenid:
+                return self.challenge_exit()
+            if transaction.spent2:
                 return self.challenge_exit()
         
         self.mark_utxo_spent(blknum, txindex, oindex)
