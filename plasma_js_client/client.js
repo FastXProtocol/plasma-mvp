@@ -480,6 +480,53 @@ class Client {
             );
     };
     
+    async challengeExit(cBlknum, cTxindex, cOindex, eUtxoIndex, options={}) {
+        let account = options.from;
+        if (!account) {
+            if (this.defaultAccount) account = this.defaultAccount;
+            else throw new Error('No default account specified!');
+        }
+        const currentChildBlock = await this.rootChainInfo.getCurrentChildBlock();
+        if (cBlknum >= currentChildBlock) {
+            throw new Error('Block has not submitted');
+        }
+        
+        const cBlock = await this.getBlock(cBlknum);
+        const cTransactions = cBlock[0];
+        const cTransaction = cTransactions[cTxindex];
+        if(!cTransaction){
+            throw new Error('Challenge Transaction does not exist');
+        }
+        
+        const cUtxoPos = this.getUtxoPos(cBlknum, cTxindex, cOindex);
+        
+        const cTxMerkleHash = this.getTransactionMerkleHash(cTransaction);
+        const cBlockMerkle = this.getBlockMerkle(cBlock);
+        const cProof = cBlockMerkle.createMembershipProof(cTxMerkleHash);
+
+        const cTransactionRlp = this.getTransactionRlp(cTransaction, 0);
+        const cTxSigs = this.getTransactionSigs(cTransaction);
+
+        if (this.debug)
+            console.log("challengeExit " +
+                ", cUtxoPos: " + cUtxoPos +
+                ", eUtxoIndex: " + eUtxoIndex +
+                ", cTransactionRlp: " + cTransactionRlp +
+                ", cProof: " + cProof + 
+                ", cTxSigs: " + cTxSigs);
+
+        let transact = {from: account, gas: 3894132};
+        return this.rootChain.methods.challengeExit(
+                cUtxoPos, eUtxoIndex, "0x" + cTransactionRlp, "0x" + cProof, "0x" + cTxSigs
+            ).send(
+                transact
+            ).on('transactionHash',
+                (hash) => {
+                    if (this.debug) console.log(hash);
+                }
+            );
+    }
+    
     finalizeExits(options={}) {
         let account = options.from;
         if (!account) {
@@ -714,9 +761,9 @@ class Client {
             sign1 = sign1.substr(2);
             sign2 = sign2.substr(2);
             let txRawWithKeys = txRaw.concat([new Buffer(sign1, 'hex'), new Buffer(sign2, 'hex')]);
-            if (this.debug) console.log('\nTxRaw: ', txRawWithKeys);
+//             if (this.debug) console.log('\nTxRaw: ', txRawWithKeys);
             let txEncoded = rlp.encode(txRawWithKeys);
-            if (this.debug) console.log("sending transaction ...");
+//             if (this.debug) console.log("sending transaction ...");
             return this.makeChildChainRpcRequest("apply_transaction", [txEncoded.toString('hex')]);
         }
         

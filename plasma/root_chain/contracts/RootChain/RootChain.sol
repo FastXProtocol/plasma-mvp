@@ -188,8 +188,8 @@ contract RootChain {
         private
     {
         uint256 blknum = utxoPos / 1000000000;
-        // uint256 exitable_at = Math.max(created_at + 2 weeks, block.timestamp + 1 weeks);
-        uint256 exitable_at = Math.max(created_at, block.timestamp); // only for debug
+        uint256 exitable_at = Math.max(created_at + 2 weeks, block.timestamp + 1 weeks);
+//         uint256 exitable_at = Math.max(created_at, block.timestamp); // only for debug
         uint256 priority = exitable_at << 128 | utxoPos;
         require(amount > 0 || tokenId > 0);
         require(exits[utxoPos].contractAddress == address(0) && exits[utxoPos].amount == 0 && exits[utxoPos].tokenId == 0);
@@ -203,27 +203,36 @@ contract RootChain {
         ExitStarted(msg.sender, utxoPos, contractAddress, amount, tokenId);
     }
 
-    // @dev Allows anyone to challenge an exiting transaction by submitting proof of a double spend on the child chain
-    // @param cUtxoPos The position of the challenging utxo
-    // @param eUtxoIndex The output position of the exiting utxo
-    // @param txBytes The challenging transaction in bytes RLP form
-    // @param proof Proof of inclusion for the transaction used to challenge
-    // @param sigs Signatures for the transaction used to challenge
-    // @param confirmationSig The confirmation signature for the transaction used to challenge
-    function challengeExit(uint256 cUtxoPos, uint256 eUtxoIndex, bytes txBytes, bytes proof, bytes sigs, bytes confirmationSig)
+    /**
+     * @dev Allows anyone to challenge an exiting transaction by submitting proof of a double spend on the child chain.
+     * @param _cUtxoPos The position of the challenging utxo.
+     * @param _eUtxoIndex The output position of the exiting utxo.
+     * @param _txBytes The challenging transaction in bytes RLP form.
+     * @param _proof Proof of inclusion for the transaction used to challenge.
+     * @param _sigs Signatures for the transaction used to challenge.
+     */
+    function challengeExit(
+        uint256 _cUtxoPos,
+        uint256 _eUtxoIndex,
+        bytes _txBytes,
+        bytes _proof,
+        bytes _sigs
+    )
         public
     {
-        uint256 eUtxoPos = txBytes.getUtxoPos(eUtxoIndex);
-        uint256 txindex = (cUtxoPos % 1000000000) / 10000;
-        bytes32 root = childChain[cUtxoPos / 1000000000].root;
-        var txHash = keccak256(txBytes);
+        uint256 eUtxoPos = _txBytes.getUtxoPos(_eUtxoIndex);
+        uint256 txindex = (_cUtxoPos % 1000000000) / 10000;
+        bytes32 root = childChain[_cUtxoPos / 1000000000].root;
+        var txHash = keccak256(_txBytes);
         var confirmationHash = keccak256(txHash, root);
-        var merkleHash = keccak256(txHash, sigs);
+        var merkleHash = keccak256(txHash, _sigs);
         address owner = exits[eUtxoPos].owner;
 
-        require(owner == ECRecovery.recover(confirmationHash, confirmationSig));
-        require(merkleHash.checkMembership(txindex, root, proof));
-        // Clear as much as possible from succesful challenge
+        // Validate the spending transaction.
+//         require(owner == ECRecovery.recover(confirmationHash, _confirmationSig));
+        require(merkleHash.checkMembership(txindex, root, _proof));
+
+        // Delete the owner but keep the amount to prevent another exit.
         delete exits[eUtxoPos].owner;
     }
 
