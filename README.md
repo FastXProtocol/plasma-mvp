@@ -4,9 +4,11 @@ Live demo: https://fastxprotocol.github.io
 
 This project is forked from Omisego's [Plasma MVP](https://github.com/omisego/plasma-mvp), but we've added a few more features as follows: 
 
-* First, we implemented a Javascript client/wallet, to have it to work both on the server and in the browser.
+* ERC20 and ERC721 support.
 
-* Secondly, we added supports for creating orders directly on the child chain. A user creates an order by specifying the asset and amount to sell, the asset and amount to buy, and other parameters, like the expiration date etc; signs the transaction and sends it to the network. The orders are stored in order pools of all FastX nodes. If there's another user who wants to take the order, she then signs the order with her private key, and sends signed order to the network to finish the deal. That way, wallet-to-wallet tradings can be done without any 3rd-party intermediaries.
+* We implemented a Javascript client/wallet, to have it to work both on the server and in the browser.
+
+* Added supports for creating orders directly on the child chain. A user creates an order by specifying the asset and amount to sell, the asset and amount to buy, and other parameters, like the expiration date etc; signs the transaction and sends it to the network. The orders are stored in order pools of all FastX nodes. If there's another user who wants to take the order, she then signs the order with her private key, and sends signed order to the network to finish the deal. That way, wallet-to-wallet tradings can be done without any 3rd-party intermediaries.
 
 * Time-locks are added to allow transactions to expire in a given period of time.
 
