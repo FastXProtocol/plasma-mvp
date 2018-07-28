@@ -14,7 +14,7 @@ from .exceptions import (InvalidBlockMerkleException,
                          TxAmountMismatchException, InvalidTxOutputsException,
                          InvalidTxInputsException, TxExpiredException,
                          BlockExpiredException, )
-from .transaction import Transaction
+from .transaction import Transaction, UnsignedTransaction0
 from .snapshot import make_snapshot
 
 
@@ -91,9 +91,31 @@ class ChildChain(object):
         
         self.save()
     
-    def challenge_exit(self):
-        print("\n\n>>>>>>>>>> Challenge Exit <<<<<<<<<<\n\n")
-        pass
+    def challenge_exit(self, utxopos, blknum, txindex, oindex):
+        for block_number, block in self.blocks.items():
+            if block_number >= blknum:
+                for transaction_index, transaction in enumerate(block.transaction_set):
+                    e_utxo_index = None
+                    if transaction.blknum1 == blknum and \
+                        transaction.txindex1 == txindex and \
+                        transaction.oindex1 == oindex:
+                        e_utxo_index = 0
+                    if transaction.blknum2 == blknum and \
+                        transaction.txindex2 == txindex and \
+                        transaction.oindex2 == oindex:
+                        e_utxo_index = 1
+                    if e_utxo_index is not None:
+                        block.merklize_transaction_set()
+                        proof = block.merkle.create_membership_proof(transaction.merkle_hash)
+                        self.root_chain.transact({'from': '0x' + self.authority.hex()}).challengeExit(
+                            block_number * 1000000000 + transaction_index * 10000,
+                            e_utxo_index,
+                            rlp.encode(transaction, UnsignedTransaction0),
+                            proof,
+                            transaction.sig1 + transaction.sig2)
+                        print("Exiting Challenged Send, UTXOPos: %s" % utxopos)
+                        return None
+        print("Exiting Challenge Does Not Exists, UTXOPos: %s" % utxopos)
     
     def apply_exit_start(self, event):
         event_args = event['args']
@@ -109,29 +131,33 @@ class ChildChain(object):
         
         block = self.blocks.get(blknum)
         if block is None:
-            return self.challenge_exit()
+            print("Exiting Block Does Not Exists, UTXOPos: %s" % utxopos)
+            return None
         
         try:
             transaction = block.transaction_set[txindex]
         except IndexError:
-            return self.challenge_exit()
+            print("Exiting Transaction Does Not Exists, UTXOPos: %s" % utxopos)
+            return None
         
         if oindex == 0:
             if utils.normalize_address(transaction.newowner1) != utils.normalize_address(exitor) or \
                 utils.normalize_address(transaction.contractaddress1) != utils.normalize_address(contractaddress) or \
                 transaction.amount1 != amount or \
                 transaction.tokenid1 != tokenid:
-                return self.challenge_exit()
+                print("Exiting UTXO Does Not Match, UTXOPos: %s" % utxopos)
+                return None
             if transaction.spent1:
-                return self.challenge_exit()
+                return self.challenge_exit(utxopos, blknum, txindex, oindex)
         else:
             if utils.normalize_address(transaction.newowner2) != utils.normalize_address(exitor) or \
                 utils.normalize_address(transaction.contractaddress2) != utils.normalize_address(contractaddress) or \
                 transaction.amount2 != amount or \
                 transaction.tokenid2 != tokenid:
-                return self.challenge_exit()
+                print("Exiting UTXO Does Not Match, UTXOPos: %s" % utxopos)
+                return None
             if transaction.spent2:
-                return self.challenge_exit()
+                return self.challenge_exit(utxopos, blknum, txindex, oindex)
         
         self.mark_utxo_spent(blknum, txindex, oindex)
         print("Exit Start %s %s %s" % (blknum, txindex, oindex))

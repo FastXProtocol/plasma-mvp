@@ -34,8 +34,9 @@ const testChallengeExit = async () => {
             console.log("root chain info: ", await fastx.rootChainInfo.getInfo());
             console.log("get exit", await fastx.rootChainInfo.getExit(fastx.getUtxoPos(blknum, txindex, oindex)));
             console.log("cUtxo", cUtxo);
-            await fastx.challengeExit(cUtxo[0], cUtxo[1], cUtxo[2], 0);
-            await sleep(1000);
+//             await fastx.challengeExit(cUtxo[0], cUtxo[1], cUtxo[2], 0);
+//             await sleep(1000);
+            await sleep(3000);
             console.log("get exit", await fastx.rootChainInfo.getExit(fastx.getUtxoPos(blknum, txindex, oindex)));
             break;
         }
