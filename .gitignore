@@ -21,3 +21,5 @@ node_modules/
 child_chain_pickle/
 
 .env
+
+.vscode
