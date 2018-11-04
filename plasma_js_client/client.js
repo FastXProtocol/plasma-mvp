@@ -103,7 +103,7 @@ class FixedMerkle {
 
         this.tree.push(tree_level)
         this.createTree(tree_level)
-    } 
+    }
 
     checkMembership (leaf, index, proof){
         // if(!this.hashed)
@@ -129,7 +129,7 @@ class FixedMerkle {
     createMembershipProof (leaf) {
         // if(!this.hashed)
         //     leaf = this.web3.utils.sha3(leaf);
-        
+
         let leavesHex = []
         for(let value of this.oldleaves){
             leavesHex.push(value.toString('hex'));
@@ -173,11 +173,11 @@ class RootChainInfo {
             }
         });
     }
-    
+
     makeRootChainCall (method, params) {
         return this.rootChain.methods[method].apply(null, params).call();
     }
-    
+
     async getInfo () {
         const info = {};
         await Promise.all([
@@ -247,7 +247,12 @@ class Client {
         this.rootChain = rootChain;
         this.rootChainInfo = new RootChainInfo({rootChain});
     }
-    
+
+    setProvider (provider) {
+        this.web3.setProvider(provider);
+        this.rootChain.setProvider(provider);
+    }
+
     getTransactionRlp (transaction, flag) {
         const [blknum1, txindex1, oindex1,
             blknum2, txindex2, oindex2,
@@ -275,7 +280,7 @@ class Client {
         }
         return rlp.encode(signTx).toString('hex');
     }
-    
+
     getTransactionMerkleHash (transaction) {
         const [blknum1, txindex1, oindex1,
             blknum2, txindex2, oindex2,
@@ -292,7 +297,7 @@ class Client {
         const merkleHash = this.web3.utils.sha3(concatBuffer);
         return merkleHash.substr(2);
     }
-    
+
     getTransactionSigs (transaction) {
         const [blknum1, txindex1, oindex1,
             blknum2, txindex2, oindex2,
@@ -311,13 +316,13 @@ class Client {
         }
         return new FixedMerkle(depth, leavesHex, hashed, this.web3);
     }
-    
+
     getBlockMerkle(block){
         const transactions = block[0];
         const hashedTransactions = transactions.map(transaction => this.getTransactionMerkleHash(transaction));
         return this.createFixedMerkle (16, hashedTransactions, true);
     }
-    
+
     makeChildChainRpcRequest (method, params) {
         return axios.post(this.fastXRpc, {
             "method": method,
@@ -326,7 +331,7 @@ class Client {
             "id": 0
         });
     };
-    
+
     async getChildChainRpcResponse (method, params) {
         let res = null;
         try {
@@ -342,7 +347,7 @@ class Client {
         let txEncoded = encodeTransaction(txRaw);
         return this.web3.utils.sha3(txEncoded);
     };
-    
+
     getUtxoPos (blknum, txindex, oindex) {
         return blknum * 1000000000 + txindex * 10000 + oindex;
     }
@@ -365,7 +370,12 @@ class Client {
             }
             return new Promise((resolve, reject) => resolve(Account.sign(hash, process.env.AUTHORITY_KEY)));
         } else {
-            return this.web3.eth.sign(hash, address);
+            let currentProvider = this.web3.currentProvider;
+            if( currentProvider.options && currentProvider.options.sign ){
+                return this.web3.currentProvider.options.sign(hash, address);
+            }else{
+                return this.web3.eth.sign(hash, address);
+            }
         }
     };
 
@@ -382,7 +392,7 @@ class Client {
         if (!account) {
             if (this.defaultAccount) account = this.defaultAccount;
             else throw new Error('No default account specified!');
-        } 
+        }
         if (this.debug)
             console.log("deposit contractAddress: " + contractAddress +
                 ", amount: " + amount +
@@ -404,7 +414,7 @@ class Client {
                 }
             );
     };
-    
+
     async startExit(blknum, txindex, oindex, contractAddress, amount, tokenid, options={}) {
         let account = options.from;
         if (!account) {
@@ -425,7 +435,7 @@ class Client {
             const txMerkleHash = this.getTransactionMerkleHash(transaction);
             const blockMerkle = this.getBlockMerkle(block);
             const proof = blockMerkle.createMembershipProof(txMerkleHash);
-            
+
             const depositPos = this.getUtxoPos(blknum, txindex, oindex);
             const transactionRlp = this.getTransactionRlp(transaction, 0);
             const txSigs = this.getTransactionSigs(transaction);
@@ -434,7 +444,7 @@ class Client {
                 console.log("startExit " +
                     ", depositPos: " + depositPos +
                     ", transactionRlp: " + transactionRlp +
-                    ", proof: " + proof + 
+                    ", proof: " + proof +
                     ", sigs: " + txSigs);
 
             let transact = {from: account, gas: 3894132};
@@ -451,7 +461,7 @@ class Client {
             return await this.startDepositExit(blknum, txindex, oindex, contractAddress, amount, tokenid, options);
         }
     }
-    
+
     startDepositExit (blknum, txindex, oindex, contractAddress, amount, tokenid, options={}) {
         let account = options.from;
         if (!account) {
@@ -479,7 +489,7 @@ class Client {
                 }
             );
     };
-    
+
     async challengeExit(cBlknum, cTxindex, cOindex, eUtxoIndex, options={}) {
         let account = options.from;
         if (!account) {
@@ -490,16 +500,16 @@ class Client {
         if (cBlknum >= currentChildBlock) {
             throw new Error('Block has not submitted');
         }
-        
+
         const cBlock = await this.getBlock(cBlknum);
         const cTransactions = cBlock[0];
         const cTransaction = cTransactions[cTxindex];
         if(!cTransaction){
             throw new Error('Challenge Transaction does not exist');
         }
-        
+
         const cUtxoPos = this.getUtxoPos(cBlknum, cTxindex, cOindex);
-        
+
         const cTxMerkleHash = this.getTransactionMerkleHash(cTransaction);
         const cBlockMerkle = this.getBlockMerkle(cBlock);
         const cProof = cBlockMerkle.createMembershipProof(cTxMerkleHash);
@@ -512,7 +522,7 @@ class Client {
                 ", cUtxoPos: " + cUtxoPos +
                 ", eUtxoIndex: " + eUtxoIndex +
                 ", cTransactionRlp: " + cTransactionRlp +
-                ", cProof: " + cProof + 
+                ", cProof: " + cProof +
                 ", cTxSigs: " + cTxSigs);
 
         let transact = {from: account, gas: 3894132};
@@ -526,7 +536,7 @@ class Client {
                 }
             );
     }
-    
+
     finalizeExits(options={}) {
         let account = options.from;
         if (!account) {
@@ -541,11 +551,11 @@ class Client {
                 }
             );
     };
-    
+
     getErc20Interface (contractAddress) {
         return new this.web3.eth.Contract(Erc20Interface, contractAddress);
     };
-    
+
     getErc721Interface (contractAddress) {
         return new this.web3.eth.Contract(Erc721Interface, contractAddress);
     };
@@ -553,7 +563,7 @@ class Client {
     getErc721TokenInterface (contractAddress) {
         return new this.web3.eth.Contract(Erc721TokenInterface, contractAddress);
     };
-    
+
     approve (contractAddress, amount, tokenid, options={}) {
         if(tokenid == 0 && amount == 0){
             throw new Error('tokenid and amount can not both be zero');
@@ -562,7 +572,7 @@ class Client {
         if (!account) {
             if (this.defaultAccount) account = this.defaultAccount;
             else throw new Error('No default account specified!');
-        } 
+        }
         if (this.debug)
             console.log("approve contractAddress: " + contractAddress +
                 ", amount: " + amount +
@@ -606,7 +616,7 @@ class Client {
         if (!address && this.defaultAccount) address = this.defaultAccount;
         return this.makeChildChainRpcRequest("get_utxo", [address, block]);
     };
-    
+
     decodeBlock (block_rlp) {
         if (!block_rlp.startsWith("0x")) {
             block_rlp = "0x" + block_rlp;
@@ -614,12 +624,12 @@ class Client {
         const block = rlp.decode(block_rlp);
         return block;
     }
-    
+
     async getCurrentBlock () {
         let block_rlp = await this.getChildChainRpcResponse("get_current_block", []);
         return this.decodeBlock(block_rlp);
     };
-    
+
     async getBlock (blknum) {
         const block_rlp = await this.getChildChainRpcResponse("get_block", [blknum]);
         return this.decodeBlock(block_rlp);
@@ -629,7 +639,7 @@ class Client {
         let from = options.from || this.defaultAccount;
         if (search['category'])
             search['category'] = normalizeAddress(search['category']).toString('hex');
-    
+
         let utxos = (await this.getAllUTXO(from)).data.result;
         let utxo, utxoObj={};
         for(let i in utxos){
@@ -638,7 +648,7 @@ class Client {
             utxoObj['category'] = _contract;
             utxoObj['tokenId'] = _tokenid;
             utxoObj['amount'] = _balance;
-    
+
             let found = false;
             Object.keys(search).every( (key, i) => {
                 // console.log(key);
@@ -650,10 +660,10 @@ class Client {
                     return found = false;
             });
             if ( found ) {
-                if (this.debug) 
+                if (this.debug)
                     console.log("\nSearch UTXO result: ", _blknum, _txindex, _oindex, _contract, _balance, _tokenid);
                 return utxo;
-            }                
+            }
         }
         return [];
     };
@@ -750,13 +760,14 @@ class Client {
         const byteNewowner1 = normalizeAddress(newowner1);
         contractaddress2 = normalizeAddress(contractaddress2);
         const byteNewowner2 = normalizeAddress(newowner2);
-        
+
         let txRaw = [blknum1, txindex1, oindex1,
            blknum2, txindex2, oindex2,
            byteNewowner1, contractaddress1, amount1, tokenid1,
            byteNewowner2, contractaddress2, amount2, tokenid2,
            fee, expiretimestamp, salt];
-        
+        if (this.debug) console.log({txRaw});
+
         let afterSign2 = (sign1, sign2) => {
             sign1 = sign1.substr(2);
             sign2 = sign2.substr(2);
@@ -766,7 +777,7 @@ class Client {
 //             if (this.debug) console.log("sending transaction ...");
             return this.makeChildChainRpcRequest("apply_transaction", [txEncoded.toString('hex')]);
         }
-        
+
         let afterSign1 = async (sign1) => {
             if (sign2 == null) {
                 let hash2 = this.hashTransaction([blknum2, txindex2, oindex2,
@@ -779,7 +790,7 @@ class Client {
             if (this.debug) console.log('Sign2: '+sign2);
             return await afterSign2(sign1, sign2);
         }
-        
+
         if (sign1 == null){
             let hash1 = this.hashTransaction([blknum1, txindex1, oindex1,
                byteNewowner1, contractaddress1, amount1, tokenid1,
@@ -787,7 +798,7 @@ class Client {
                fee, expiretimestamp, salt]);
             if (this.debug) console.log('Hash1: '+hash1);
             sign1 = await this.sign(hash1, address1);
-        } 
+        }
         if (this.debug) console.log('Sign1: '+sign1)
         return await afterSign1(sign1);
     };
@@ -833,13 +844,13 @@ class Client {
         contractaddress1 = normalizeAddress(contractaddress1);
         const byteNewowner1 = normalizeAddress(newowner1);
         contractaddress2 = normalizeAddress(contractaddress2);
-        
+
         let txRaw = [blknum1, txindex1, oindex1,
            0, 0, 0,
            byteNewowner1, contractaddress1, amount1, tokenid1,
            normalizeAddress("0x0"), contractaddress2, amount2, tokenid2,
            fee, expiretimestamp, salt];
-                
+
         let afterSign1 = (sign1) => {
             sign1 = sign1.substr(2);
             const byteSign1 = new Buffer(sign1, 'hex');
@@ -849,7 +860,7 @@ class Client {
             if (this.debug) console.log("sending ps transaction ...");
             return this.makeChildChainRpcRequest("apply_ps_transaction", [txEncoded.toString('hex')]);
         }
-        
+
         if (sign1 == null){
             let hash1 = this.hashTransaction([blknum1, txindex1, oindex1,
                 byteNewowner1, contractaddress1, amount1, tokenid1,
@@ -857,9 +868,9 @@ class Client {
                 fee, expiretimestamp, salt]);
             if (this.debug) console.log('Hash1: ',hash1);
             sign1 = await this.sign(hash1, address1);
-        } 
+        }
         if (this.debug) console.log('Sign1: '+sign1)
-        return afterSign1(sign1);       
+        return afterSign1(sign1);
     };
 
     /**
@@ -875,7 +886,7 @@ class Client {
      */
     sendPsTransactionFill (psTransaction,
            blknum2, txindex2, oindex2,
-           newowner2, 
+           newowner2,
            address2=null, sign2=null
     ) {
         if (!root.process){
@@ -883,7 +894,7 @@ class Client {
                 throw new Error("sign2 and address2 can not both be none");
             }
         }
-        
+
         const blknum1 = psTransaction.blknum1;
         const txindex1 = psTransaction.txindex1;
         const oindex1 = psTransaction.oindex1;
@@ -897,9 +908,9 @@ class Client {
         const fee = psTransaction.fee;
         const expiretimestamp = psTransaction.expiretimestamp;
         const salt = psTransaction.salt;
-        
+
         const sign1 = "0x" + psTransaction.sig1;
-        
+
         return this.sendTransaction(blknum1, txindex1, oindex1,
            blknum2, txindex2, oindex2,
            newowner1, contractaddress1, amount1, tokenid1,
@@ -936,7 +947,7 @@ class Client {
                 if (txQueue.length > 0 ) {
                     for (let j in txQueue) {
                         fromUtxo = txQueue[j];
-                        if ( blknum == fromUtxo.blkNum 
+                        if ( blknum == fromUtxo.blkNum
                             && txindex == fromUtxo.txIndex
                             && oindex == fromUtxo.oIndex ) {
                                 isInQueue = true;
@@ -990,15 +1001,16 @@ class Client {
                     fromUtxo = txQueue.pop();
                 } else {
                     fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress});
-                }    
+                }
                 console.log('\nfromUtxo: ', fromUtxo);
                 remainder = amount - fromUtxo.balance;
-                console.log('\nRemainder: ', remainder);  
-                
+                console.log('\nRemainder: ', remainder);
+
                 if (remainder < 0) {
                     let amount1 = fromUtxo.balance + remainder;
                     let amount2 = fromUtxo.balance - amount1;
                     toUtxo = new UTXO(0,0,0,fromUtxo.contract,amount2,fromUtxo.tokenId,to);
+                    console.log({toUtxo});
                     fromUtxo.balance = amount1;
                     let tx = await this._splitUtxo(fromUtxo, toUtxo);
                     // console.log(utxo);
@@ -1010,7 +1022,7 @@ class Client {
                     // need to push the fromUtxo into Queue first, in order to get
                     // the correct second Utxo.
                     txQueue.push(fromUtxo);
-                    
+
                     toUtxo = await this.searchEthUtxo(remainder, {from: fromAddress});
                     if ( toUtxo.exists() && ! toUtxo.isEqual(fromUtxo) ) {
                         // make sure fromUtxo != toUtxo
@@ -1020,11 +1032,11 @@ class Client {
                     } else {
                         toUtxo = await this.getNextUtxo(txQueue, {from:fromAddress});
                         console.log('\ntoUtxo: ', toUtxo);
-    
+
                         // txQueue = txQueue.push(toUtxo);
                         remainder = remainder - toUtxo.balance;
                         console.log('\nRemainder: ', remainder);
-    
+
                         if (remainder > 0) {
                             // more utxo needs to be merged.
                             // send the transaction here
@@ -1047,10 +1059,10 @@ class Client {
                             // console.log(utxo);
                             txQueue = await this.sendEth2(to, amount, txQueue, options);
                         }
-                    }  
-                }       
-            }          
-        } 
+                    }
+                }
+            }
+        }
         else {
             console.log('Split Utxo');
             if ( fromUtxo.exists() ) {
@@ -1058,17 +1070,17 @@ class Client {
                 // send the tx
                 let tx = await this._splitUtxo(fromUtxo, toUtxo);
                 // console.log(utxo);
-                return txQueue;              
+                return txQueue;
             } else {
                 fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress});
-            
+
                 console.log('\nfromUtxo: ', fromUtxo);
                 remainder = amount - fromUtxo.balance;
                 console.log('\nRemainder: ', remainder);
                 if ( remainder > 0 ) {
                     toUtxo = new UTXO(0,0,0,fromUtxo.contract,0,fromUtxo.tokenId,to);
                     let tx = await this._splitUtxo(fromUtxo, toUtxo);
-                    // console.log(utxo);                   
+                    // console.log(utxo);
                     // txQueue = txQueue.concat({from:fromUtxo, to:toUtxo})
                     // console.log('\nTxQueue ', txQueue);
                     txQueue = await this.sendEth2(to, remainder, txQueue, options);
@@ -1125,7 +1137,7 @@ class Client {
         for(let i in utxos){
             utxo = utxos[utxos.length - i - 1];
             const [_blknum, _txindex, _oindex, _contract, _balance, _tokenid] = utxo;
-    
+
             if (_balance > 0 && contract == _contract && tokenid == _tokenid){
                 if (this.debug) console.log(_blknum, _txindex, _oindex, _contract, _balance, _tokenid);
 
@@ -1134,9 +1146,9 @@ class Client {
                 if (this.debug) console.log('output 0: ' + (_balance - txAmount) + ', output 1: ' + txAmount);
 
                 txPromise = this.sendPsTransaction(
-                    _blknum, _txindex, _oindex, 
-                    from, 
-                    _contract, _balance - txAmount, _tokenid, 
+                    _blknum, _txindex, _oindex,
+                    from,
+                    _contract, _balance - txAmount, _tokenid,
                     _contract, txAmount, _tokenid);
 
                 if (remainder <= 0) {
@@ -1146,22 +1158,22 @@ class Client {
             }
         }
     };
-    
+
     createLoginString(appName) {
         return appName + "_" + Math.floor((0.1 + 0.9 * Math.random()) * Math.pow(10, 10));
     };
-    
+
     async signLoginString(loginString, address) {
         if(address == null){
             address = this.defaultAccount;
         }
         return await this.sign(this.web3.utils.sha3(loginString), address);
     };
-    
+
     getLoginAddress(loginString, sign) {
         return Account.recover(this.web3.utils.sha3(loginString), sign);
     };
-    
+
     checkLoginString(loginString, sign, address) {
         return loginString && sign && address &&
             this.getLoginAddress(loginString, sign).toLowerCase() == address.toLowerCase();

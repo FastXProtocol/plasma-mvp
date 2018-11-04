@@ -30,28 +30,29 @@ export const getPsTx = async () => {
 };
 
 
-export const approveDeposit = async (contractAddress, amount, tokenId) => {
-    await logBalance();
-    await fastx.approve(contractAddress, amount, tokenId);
-    await fastx.deposit(contractAddress, amount, tokenId);
-    await sleep(1000);
-    await logBalance();
+export const approveDeposit = async (from, contractAddress, amount, tokenId) => {
+    // await logBalance(from);
+    await fastx.approve(contractAddress, amount, tokenId, {from: from});
+    await fastx.deposit(contractAddress, amount, tokenId, {from, from});
+    // await sleep(1000);
+    // await logBalance(from);
 };
 
 
-export const depositNFT = async () => {
+export const depositNFT = async (from) => {
     const totalSupply = await erc721Contract.methods.totalSupply().call();
     const tokenid = parseInt(totalSupply) + 10;
+    const account = from || ownerAddress
 
     console.log('Creating new token: '+tokenid);
 
     // Create a new token
-    await erc721Contract.methods.mint(ownerAddress, tokenid)
-        .send({from: ownerAddress, gas: 3873385})
+    await erc721Contract.methods.mint(account, tokenid)
+        .send({from: account, gas: 3873385})
         .on('transactionHash', console.log);
 
     // Approve the token to be able to transfer to the FastX contract
-    await approveDeposit(erc721ContractAddress, 0, tokenid);
+    await approveDeposit(account, erc721ContractAddress, 0, tokenid);
     return {
         category: erc721ContractAddress, 
         tokenId: tokenid
