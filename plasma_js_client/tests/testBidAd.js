@@ -39,6 +39,5 @@ export default testBidAd;
 
 
 if (typeof require != 'undefined' && require.main == module) {
-    console.log(1111111111111111111111111111111111111111)
     testBidAd();
 }

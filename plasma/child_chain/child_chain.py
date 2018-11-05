@@ -61,7 +61,6 @@ class ChildChain(object):
             with open(os.path.join(plasma_config["PICKLE_DIR"], field_name + ".pickle"), "wb") as f:
                 pickle.dump(getattr(self, field_name), f, pickle.HIGHEST_PROTOCOL)
         print('child chain saved')
-        
     
     def load(self):
         if os.path.exists(plasma_config["PICKLE_DIR"]):
