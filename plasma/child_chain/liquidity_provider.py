@@ -81,5 +81,5 @@ class LiquidilyProvider(object):
         ps_tx = Transaction(blknum1, txindex1, oindex1, 0, 0, 0,
                             utils.normalize_address(self.address), b'\x00' * 20 if from_contractaddress == "0x0" else from_contractaddress, amount, 0,
                             b'\x00' * 20, contractaddress2, amount2, tokenid2)
-        ps_tx.sign2(utils.normalize_key(plasma_config["AUTHORITY_KEY"]))
+        ps_tx.sign1(utils.normalize_key(plasma_config["AUTHORITY_KEY"]))
         return ps_tx.to_json()
