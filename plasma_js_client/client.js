@@ -1179,11 +1179,19 @@ class Client {
             this.getLoginAddress(loginString, sign).toLowerCase() == address.toLowerCase();
     };
 
+    async getCurrentBlockNum() {
+        return this.getChildChainRpcResponse("get_current_block_num", []);
+    }
+
+    async getTransactionsAfter(blknum, txindex) {
+        return this.getChildChainRpcResponse("get_transactions_after", [blknum, txindex]);
+    };
+
     /**
      * Liquidity Provider (Test Only).
      */
-    getExchangeRate(fromContractAddress, toContractAddress, amount) {
-        return this.makeChildChainRpcRequest("get_exchange_rate", [fromContractAddress, toContractAddress, amount]);
+    async getExchangeRate(fromContractAddress, toContractAddress, amount) {
+        return this.getChildChainRpcResponse("get_exchange_rate", [fromContractAddress, toContractAddress, amount]);
     };
 
     createExchangePartiallySignedTransaction(fromContractAddress, toContractAddress, amount) {

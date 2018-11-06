@@ -50,7 +50,9 @@ class ChildChain(object):
         return ["blocks", "current_block_number", "current_block", "pending_transactions"]
     
     def save(self):
-#         print('saving child chain...')
+        # print("skip save")
+        # return None
+
         if not os.path.exists(plasma_config["PICKLE_DIR"]):
             os.mkdir(plasma_config["PICKLE_DIR"])
 
@@ -407,6 +409,16 @@ class ChildChain(object):
         for block_number, block in self.blocks.items():
             for tx_index, tx in enumerate(block.transaction_set):
                 res.append([block_number, tx_index, str(tx)])
+        return res
+    
+    def get_transactions_after(self, block_number, tx_index):
+        res = []
+        for cur_block_number in sorted(self.blocks.keys()):
+            if cur_block_number >= block_number and cur_block_number % self.child_block_interval == 0:
+                block = self.blocks[cur_block_number]
+                for cur_tx_index, tx in enumerate(block.transaction_set):
+                    if cur_tx_index > tx_index:
+                        res.append([cur_block_number, cur_tx_index, tx.to_json()])
         return res
 
     def eth_raw_transaction(self, raw_tx):

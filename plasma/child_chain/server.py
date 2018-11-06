@@ -39,6 +39,7 @@ dispatcher["get_block"] = lambda blknum: child_chain.get_block(blknum)
 dispatcher["get_balance"] = lambda address, block: child_chain.get_balance(address, block)
 dispatcher["get_utxo"] = lambda address, block: child_chain.get_utxo(address, block)
 dispatcher["get_all_transactions"] = lambda: child_chain.get_all_transactions()
+dispatcher["get_transactions_after"] = lambda block_number, tx_index: child_chain.get_transactions_after(block_number, tx_index)
 dispatcher["apply_ps_transaction"] = lambda ps_transaction: partially_signed_transaction_pool.apply_ps_transaction(ps_transaction)
 dispatcher["get_all_ps_transactions"] = lambda: partially_signed_transaction_pool.get_all_ps_transactions()
 # MetaMask interface

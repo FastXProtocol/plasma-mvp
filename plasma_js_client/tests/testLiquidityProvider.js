@@ -18,7 +18,7 @@ const getFromUTXO = async() => {
 
 
 const testLiquidityProvider = async() => {
-    let rate = (await fastx.getExchangeRate("0x0", erc20ContractAddress, fromAmount)).data.result;
+    let rate = await fastx.getExchangeRate("0x0", erc20ContractAddress, fromAmount);
     console.log("rate", rate);
     let psTx = (await fastx.createExchangePartiallySignedTransaction("0x0", erc20ContractAddress, fromAmount)).data.result;
     console.log("psTx", psTx);
