@@ -7,6 +7,7 @@ from plasma.child_chain.child_chain import ChildChain
 from plasma.child_chain.partially_signed_transaction_pool import PartiallySignedTransactionPool
 from plasma.child_chain.block_auto_submitter import BlockAutoSubmitter
 from plasma.child_chain.finalize_exits_auto_submitter import FinalizeExitsAutoSubmitter
+from plasma.child_chain.liquidity_provider import LiquidilyProvider
 from plasma.config import plasma_config
 from plasma.root_chain.deployer import Deployer
 
@@ -15,6 +16,7 @@ partially_signed_transaction_pool = PartiallySignedTransactionPool()
 child_chain = ChildChain(plasma_config['AUTHORITY'], root_chain, partially_signed_transaction_pool=partially_signed_transaction_pool)
 BlockAutoSubmitter(child_chain, plasma_config['BLOCK_AUTO_SUMBITTER_INTERVAL']).start()
 FinalizeExitsAutoSubmitter(plasma_config['AUTHORITY'], root_chain, plasma_config['FINALIZE_EXITS_AUTO_SUBMITTER_INTERVAL']).start()
+liquidity_provider = LiquidilyProvider(child_chain)
 
 
 def printKey(key):
@@ -44,6 +46,9 @@ dispatcher["eth_getBalance"] = lambda address, block: child_chain.get_balance(ad
 dispatcher["eth_getBlockByNumber"] = lambda block, deep: child_chain.get_block_by_num(block, deep)
 dispatcher["net_version"] = lambda: child_chain.get_version()
 dispatcher["eth_sendRawTransaction"] = lambda raw_tx: child_chain.eth_raw_transaction(raw_tx)
+# Liquidity provider (test only)
+dispatcher["get_exchange_rate"] = lambda from_contractaddress, to_contractaddress, amount: liquidity_provider.get_exchange_rate(from_contractaddress, to_contractaddress, amount)
+dispatcher["create_partially_signed_transaction"] = lambda from_contractaddress, to_contractaddress, amount: liquidity_provider.create_partially_signed_transaction(from_contractaddress, to_contractaddress, amount)
 
 for key in dispatcher.keys():
     dispatcher[key] = printKey(key)(dispatcher[key])

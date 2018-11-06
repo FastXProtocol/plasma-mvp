@@ -1178,6 +1178,17 @@ class Client {
         return loginString && sign && address &&
             this.getLoginAddress(loginString, sign).toLowerCase() == address.toLowerCase();
     };
+
+    /**
+     * Liquidity Provider (Test Only).
+     */
+    getExchangeRate(fromContractAddress, toContractAddress, amount) {
+        return this.makeChildChainRpcRequest("get_exchange_rate", [fromContractAddress, toContractAddress, amount]);
+    };
+
+    createExchangePartiallySignedTransaction(fromContractAddress, toContractAddress, amount) {
+        return this.makeChildChainRpcRequest("create_partially_signed_transaction", [fromContractAddress, toContractAddress, amount]);
+    };
 }
 
 export default Client;
