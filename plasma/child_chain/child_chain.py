@@ -417,8 +417,9 @@ class ChildChain(object):
             if cur_block_number >= block_number and cur_block_number % self.child_block_interval == 0:
                 block = self.blocks[cur_block_number]
                 for cur_tx_index, tx in enumerate(block.transaction_set):
-                    if cur_tx_index > tx_index:
-                        res.append([cur_block_number, cur_tx_index, tx.to_json()])
+                    if cur_block_number == block_number and cur_tx_index <= tx_index:
+                        continue
+                    res.append([cur_block_number, cur_tx_index, tx.to_json()])
         return res
 
     def eth_raw_transaction(self, raw_tx):

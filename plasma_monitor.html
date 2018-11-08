@@ -1,0 +1,83 @@
+<html>
+    <head>
+        <title>Plasma Monitor</title>
+        <link rel="stylesheet" href="static/css/bootstrap.min.css" />
+        <style>
+            .list-group-item{
+                margin-bottom: 2px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h3 style="color: grey">Transactions</h3>
+            <ul id="transaction-container" class="list-group">
+                No New Transactions
+            </ul>
+        </div>
+        <script src="plasma_js_client.js"></script>
+        <script>
+            const fastx = new window.plasmaClient.client({
+                debug: true,
+                gethRpc: "http://localhost:8545",
+                fastXRpc: "http://localhost:8546/jsonrpc",
+                rootChainAddress: "0xa3b2a1804203b75b494028966c0f62e677447a39",
+                defaultAccount: "0xfd02EcEE62797e75D86BCff1642EB0844afB28c7",
+            });
+            const sleep = async (millisecond) => {
+                await new Promise(resolve => setTimeout(resolve, millisecond));
+            };
+            const ZERO_ADDRESS = "0000000000000000000000000000000000000000";
+            const autoRefresher = async() => {
+                const MAX_ELEMENT_COUNT = 50;
+                let curBlknum = await fastx.getCurrentBlockNum() - 1000;
+                let curTxindex = -1;
+                const txContainer = document.getElementById("transaction-container");
+                let isEmpty = true;
+                while(1){
+                    let transactions;
+                    let penddingBlknum;
+                    try{
+                        transactions = await fastx.getTransactionsAfter(curBlknum, curTxindex);
+                        penddingBlknum = await fastx.getCurrentBlockNum();
+                    }catch(err){
+                        await sleep(1000);
+                        continue;
+                    }
+                    for(const [blknum, txindex, transaction] of transactions){
+                        console.log([blknum, txindex, transaction])
+                        curBlknum = Math.max(curBlknum, blknum);
+                        curTxindex = Math.max(curTxindex, txindex);
+                        const newLi = document.createElement("li");
+                        newLi.className = "list-group-item list-group-item-warning";
+                        let html = "<strong>TX#" + blknum + "-" + txindex + "</strong>";
+                        if(transaction.newowner1 != ZERO_ADDRESS){
+                            html += "<br />0x"+ transaction.newowner1 + " (" + (transaction.contractaddress1 == ZERO_ADDRESS? "ETH": "0x" + transaction.contractaddress1) + "): " + (transaction.amount1 == 0? transaction.tokenid1: transaction.amount1);
+                        }
+                        if(transaction.newowner2 != ZERO_ADDRESS){
+                            html += "<br />0x"+ transaction.newowner2 + " (" + (transaction.contractaddress2 == ZERO_ADDRESS? "ETH": "0x" + transaction.contractaddress2) + "): " + (transaction.amount2 == 0? transaction.tokenid2: transaction.amount2);
+                        }
+                        newLi.innerHTML = html;
+                        newLi.blknum = blknum;
+                        newLi.txindex = txindex;
+                        if(isEmpty){
+                            txContainer.innerHTML = "";
+                            isEmpty = false;
+                        }
+                        txContainer.insertBefore(newLi, txContainer.childNodes[0]);
+                        while(txContainer.childNodes.length > MAX_ELEMENT_COUNT){
+                            txContainer.removeChild(txContainer.childNodes[MAX_ELEMENT_COUNT])
+                        }
+                    }
+                    for(let element of txContainer.childNodes){
+                        if(element.blknum < penddingBlknum){
+                            element.className = "list-group-item list-group-item-info";
+                        }
+                    }
+                    await sleep(500);
+                }
+            }
+            autoRefresher();
+        </script>
+    </body>
+</html>
