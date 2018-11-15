@@ -46,8 +46,12 @@
                     }
                     for(const [blknum, txindex, transaction] of transactions){
                         console.log([blknum, txindex, transaction])
+                        if(blknum > curBlknum){
+                            curTxindex = txindex;
+                        } else {
+                            curTxindex = Math.max(curTxindex, txindex);
+                        }
                         curBlknum = Math.max(curBlknum, blknum);
-                        curTxindex = Math.max(curTxindex, txindex);
                         const newLi = document.createElement("li");
                         newLi.className = "list-group-item list-group-item-warning";
                         let html = "<strong>TX#" + blknum + "-" + txindex + "</strong>";
