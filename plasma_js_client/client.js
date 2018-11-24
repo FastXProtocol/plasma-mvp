@@ -942,6 +942,10 @@ class Client {
         for (let i in utxos) {
             utxo = utxos[i];
             const [blknum, txindex, oindex, contract, balance, tokenid] = utxo;
+            if (options.contractAddress &&
+                normalizeAddress(options.contractAddress).toString('hex') != normalizeAddress(contract).toString('hex')){
+                continue;
+            }
             let isInQueue = false;
             if (balance > 0){
                 if (txQueue.length > 0 ) {
@@ -1000,7 +1004,7 @@ class Client {
                 if ( txQueue.length > 0) {
                     fromUtxo = txQueue.pop();
                 } else {
-                    fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress});
+                    fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress, contractAddress: "0x0"});
                 }
                 console.log('\nfromUtxo: ', fromUtxo);
                 remainder = amount - fromUtxo.balance;
