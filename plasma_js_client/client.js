@@ -983,23 +983,25 @@ class Client {
         for (let i in utxos) { 
             utxo = utxos[i];
             const [blknum, txindex, oindex, contract, balance, tokenid] = utxo;
+            if (options.contractAddress &&
+                normalizeAddress(options.contractAddress).toString('hex') != normalizeAddress(contract).toString('hex')){
+                continue;
+            }
             let isInQueue = false;
-            if(contract == options.token){
-                if (balance > 0){
-                    if (txQueue.length > 0 ) {
-                        for (let j in txQueue) {
-                            fromUtxo = txQueue[j];
-                            if ( blknum == fromUtxo.blkNum
-                                && txindex == fromUtxo.txIndex
-                                && oindex == fromUtxo.oIndex ) {
-                                    isInQueue = true;
-                                }
-                        }
+            if (balance > 0){
+                if (txQueue.length > 0 ) {
+                    for (let j in txQueue) {
+                        fromUtxo = txQueue[j];
+                        if ( blknum == fromUtxo.blkNum
+                            && txindex == fromUtxo.txIndex
+                            && oindex == fromUtxo.oIndex ) {
+                                isInQueue = true;
+                            }
                     }
-                    if ( ! isInQueue )
-                        return new UTXO(blknum, txindex, oindex, contract, balance, tokenid, fromAddress);
                 }
-            }     
+                if ( ! isInQueue )
+                    return new UTXO(blknum, txindex, oindex, contract, balance, tokenid, fromAddress);
+            }
         }
 
         return new UTXO();
@@ -1043,7 +1045,7 @@ class Client {
                 if ( txQueue.length > 0) {
                     fromUtxo = txQueue.pop();
                 } else {
-                    fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress,token:'0000000000000000000000000000000000000000'});
+                    fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress, contractAddress: "0x0"});
                 }
                 console.log('\nfromUtxo: ', fromUtxo);
                 remainder = amount - fromUtxo.balance;
@@ -1073,7 +1075,7 @@ class Client {
                         let tx = await this._mergeUtxo(fromUtxo, toUtxo);
                         // console.log(utxo);
                     } else {
-                        toUtxo = await this.getNextUtxo(txQueue, {from:fromAddress,token:'0000000000000000000000000000000000000000'});
+                        toUtxo = await this.getNextUtxo(txQueue, {from:fromAddress, contractAddress: "0x0"});
                         console.log('\ntoUtxo: ', toUtxo);
 
                         // txQueue = txQueue.push(toUtxo);
@@ -1115,7 +1117,7 @@ class Client {
                 // console.log(utxo);
                 return txQueue;
             } else {
-                fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress,token:'0000000000000000000000000000000000000000'});
+                fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress, contractAddress: "0x0"});
 
                 console.log('\nfromUtxo: ', fromUtxo);
                 remainder = amount - fromUtxo.balance;
@@ -1158,7 +1160,7 @@ class Client {
                 if ( txQueue.length > 0) {
                     fromUtxo = txQueue.pop();
                 } else {
-                    fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress,token:'395b650707caa0d300615bba2901398dff64cf7c'});
+                    fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress, contractAddress: '395b650707caa0d300615bba2901398dff64cf7c'});
                 }
                 console.log('\nfromUtxo: ', fromUtxo);
                 remainder = amount - fromUtxo.balance;
@@ -1188,7 +1190,7 @@ class Client {
                         let tx = await this._mergeUtxo(fromUtxo, toUtxo);
                         // console.log(utxo);
                     } else {
-                        toUtxo = await this.getNextUtxo(txQueue, {from:fromAddress,token:'395b650707caa0d300615bba2901398dff64cf7c'});
+                        toUtxo = await this.getNextUtxo(txQueue, {from: fromAddress, contractAddress: '395b650707caa0d300615bba2901398dff64cf7c'});
                         console.log('\ntoUtxo: ', toUtxo);
 
                         // txQueue = txQueue.push(toUtxo);
@@ -1230,7 +1232,7 @@ class Client {
                 // console.log(utxo);
                 return txQueue;
             } else {
-                fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress,token:'395b650707caa0d300615bba2901398dff64cf7c'});
+                fromUtxo = await this.getNextUtxo(txQueue, {from: fromAddress, contractAddress: '395b650707caa0d300615bba2901398dff64cf7c'});
 
                 console.log('\nfromUtxo: ', fromUtxo);
                 remainder = amount - fromUtxo.balance;
