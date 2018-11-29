@@ -66,7 +66,7 @@ class FixedMerkle {
         }
 
         let fillArray = new Array(this.leaf_count - leaves.length);
-        fillArray.fill(new Buffer('0000000000000000000000000000000000000000', 'hex'))
+        fillArray.fill(new Buffer('0000000000000000000000000000000000000000000000000000000000000000', 'hex'))
         this.leaves = leaves.concat(fillArray);
         this.tree = [this.createNodes(this.leaves)];
         this.createTree(this.tree[0]);
