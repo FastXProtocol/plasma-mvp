@@ -4,7 +4,7 @@ import {sleep} from "./utils";
 
 const logBalance = async (address) => {
     console.log("\naddress: ", address );
-    console.log("balance: ", await fastx.getEthBalance(address));
+    console.log("balance: ", await fastx.getTokenBalance(address));
     let utxos = (await fastx.getAllUTXO(address)).data.result;
     console.log('\n', utxos);
 }

@@ -11,7 +11,7 @@ const testBalance = async () => {
 
     // console.log('Exists: ', utxo.exists());
 
-    let res = (await fastx.getEthBalance(address));
+    let res = (await fastx.getTokenBalance(address));
     console.log("\naddress: ", address );
     console.log("balance: ", res);
     let utxos = (await fastx.getAllUTXO(address)).data.result;
