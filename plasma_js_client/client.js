@@ -379,6 +379,22 @@ class Client {
         }
     };
 
+    initCategoryParams(category, options){
+        if(typeof options === 'undefined'){
+            options = {};
+        }
+        if (typeof category === 'object'){
+            options = category;
+            category = '0x0';
+        } else if (typeof category === 'undefined'){
+            category = options.category? options.category.replace('0x',''): '0x0';
+        }
+        if(category != "0x0"){
+            category = category.replace('0x','');
+        }
+        return [category, options];
+    }
+    
     /**
      * Deposit assets to the FastX chain.
      * @method
@@ -603,16 +619,9 @@ class Client {
     async getTokenBalance (address, category, block="latest") {
         const balance = await this.getBalance(address, block);
         const ftBalance = balance['FT'];
-        let token;
-        if(!category || category == "0x0"){
-            token = '0'.repeat(40);
-        }else{
-            token = category.replace('0x','');
-        }
-
         for ( let i in ftBalance ) {
             // console.log(ftBalance[i]);
-            if (token === ftBalance[i][0])
+            if (normalizeAddress(category).toString('hex') == normalizeAddress(ftBalance[i][0]).toString('hex'))
                 return ftBalance[i][1];
         }
         return null;
@@ -674,9 +683,9 @@ class Client {
         return [];
     };
 
-    async searchUtxo(amount, options={}) {
+    async searchUtxo(amount, category, options) {
+        [category, options] = this.initCategoryParams(category, options);
         let _owner = options.from || this.defaultAccount;
-        let category = options.category?options.category.replace('0x','') : '0x0';
         console.log('\nsearchUtxo ' +category+ ':' +amount+', from: '+_owner);
         const [_blkNum, _txIndex, _oIndex, _contract, _balance, _tokenId] =
             await this.searchUTXO(
@@ -692,9 +701,10 @@ class Client {
      * @param {Object} options - including from: the asset owner's address.
      * @returns {[]} - utxo array
      */
-    async getOrNewUtxo(amount, options={}) {
+    async getOrNewUtxo(amount, category, options) {
+        [category, options] = this.initCategoryParams(category, options);
+        if (this.debug) console.log("category", category);
         let from = options.from || this.defaultAccount;
-        let category = options.category ? options.category.replace('0x','') : '0x0';
         let utxo=[];
         if (! amount) {
             throw new Error('The amount supplied is not valid ->', amount);
@@ -705,7 +715,7 @@ class Client {
             throw new Error('Not enough balance');
         }
 
-        await this.sendToken(from, amount, options);
+        await this.sendToken(from, amount, category, options);
 
         // Get the newly created utxo.
         utxo = await this.searchUTXO({category: category, tokenId: 0, amount: amount}, options);
@@ -940,7 +950,8 @@ class Client {
      * @method
      * @returns {UTXO} return A UTXO instance
      */
-    async getNextUtxo(txQueue=[], options={}) {
+    async getNextUtxo(txQueue=[], category, options={}) {
+        [category, options] = this.initCategoryParams(category, options);
         let fromAddress = options.from || this.defaultAccount;
 
         const utxos = (await this.getAllUTXO(fromAddress)).data.result;
@@ -950,8 +961,8 @@ class Client {
         for (let i in utxos) { 
             utxo = utxos[i];
             const [blknum, txindex, oindex, contract, balance, tokenid] = utxo;
-            if (options.contractAddress &&
-                normalizeAddress(options.contractAddress).toString('hex') != normalizeAddress(contract).toString('hex')){
+            if (category &&
+                normalizeAddress(category).toString('hex') != normalizeAddress(contract).toString('hex')){
                 continue;
             }
             let isInQueue = false;
@@ -991,18 +1002,18 @@ class Client {
         return this.sendTransaction(
             fromUtxo.blkNum, fromUtxo.txIndex, fromUtxo.oIndex,
             toUtxo.blkNum, toUtxo.txIndex, toUtxo.oIndex,
-            fromUtxo.owner, fromUtxo.contract, 0, fromUtxo.tokenId,
-            toUtxo.owner,toUtxo.contract, parseInt(fromUtxo.balance) + parseInt(toUtxo.balance), toUtxo.tokenId,
+            toUtxo.owner, toUtxo.contract, parseInt(fromUtxo.balance) + parseInt(toUtxo.balance), toUtxo.tokenId,
+            "0x0", "0x0", 0, 0,
             0, null, null, fromUtxo.owner, toUtxo.owner
         );
     }
 
-    async sendToken2(to, amount, txQueue, options={}) {
+    async sendToken2(to, amount, txQueue, category, options) {
+        [category, options] = this.initCategoryParams(category, options);
         let fromAddress = options.from || this.defaultAccount;
-        let category = options.category?options.category.replace('0x','') : "0x0";
         let fromUtxo=null, toUtxo=null, utxo=null, remainder=0;
 
-        fromUtxo = await this.searchUtxo(amount, {from: fromAddress});
+        fromUtxo = await this.searchUtxo(amount, category, {from: fromAddress});
 
         if (fromAddress == to) {
             console.log('Merge UTXO');
@@ -1012,7 +1023,7 @@ class Client {
                 if ( txQueue.length > 0) {
                     fromUtxo = txQueue.pop();
                 } else {
-                    fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress, contractAddress: category});
+                    fromUtxo = await this.getNextUtxo(txQueue, category, {from:fromAddress});
                 }
                 console.log('\nfromUtxo: ', fromUtxo);
                 remainder = amount - fromUtxo.balance;
@@ -1035,14 +1046,14 @@ class Client {
                     // the correct second Utxo.
                     txQueue.push(fromUtxo);
 
-                    toUtxo = await this.searchUtxo(remainder, {from: fromAddress});
+                    toUtxo = await this.searchUtxo(remainder, category, {from: fromAddress});
                     if ( toUtxo.exists() && ! toUtxo.isEqual(fromUtxo) ) {
                         // make sure fromUtxo != toUtxo
                         txQueue.pop();
                         let tx = await this._mergeUtxo(fromUtxo, toUtxo);
                         // console.log(utxo);
                     } else {
-                        toUtxo = await this.getNextUtxo(txQueue, {from:fromAddress, contractAddress: "0x0"});
+                        toUtxo = await this.getNextUtxo(txQueue, category, {from:fromAddress});
                         console.log('\ntoUtxo: ', toUtxo);
 
                         // txQueue = txQueue.push(toUtxo);
@@ -1055,11 +1066,11 @@ class Client {
                             let tx = await this._mergeUtxo(fromUtxo, toUtxo);
                             // get the created utxo
                             let utxo = await this.searchUtxo(
-                                fromUtxo.balance + toUtxo.balance, {from: toUtxo.owner});
+                                fromUtxo.balance + toUtxo.balance, category, {from: toUtxo.owner});
                             txQueue.pop();
                             txQueue.push(utxo);
                             // then keep working on merging
-                            txQueue = await this.sendToken2(to, amount, txQueue, options);
+                            txQueue = await this.sendToken2(to, amount, txQueue, category, options);
                         } else if (remainder < 0) {
                             let amount1 = toUtxo.balance + remainder;
                             let amount2 = toUtxo.balance - amount1;
@@ -1069,7 +1080,7 @@ class Client {
                             // txQueue = txQueue.push(fromUtxo);
                             let tx = await this._splitUtxo(toUtxo, splitUtxo);
                             // console.log(utxo);
-                            txQueue = await this.sendToken2(to, amount, txQueue, options);
+                            txQueue = await this.sendToken2(to, amount, txQueue, category, options);
                         }
                     }
                 }
@@ -1084,8 +1095,7 @@ class Client {
                 // console.log(utxo);
                 return txQueue;
             } else {
-                fromUtxo = await this.getNextUtxo(txQueue, {from:fromAddress, contractAddress: "0x0"});
-
+                fromUtxo = await this.getNextUtxo(txQueue, category, {from:fromAddress});
                 console.log('\nfromUtxo: ', fromUtxo);
                 remainder = amount - fromUtxo.balance;
                 console.log('\nRemainder: ', remainder);
@@ -1095,7 +1105,7 @@ class Client {
                     // console.log(utxo);
                     // txQueue = txQueue.concat({from:fromUtxo, to:toUtxo})
                     // console.log('\nTxQueue ', txQueue);
-                    txQueue = await this.sendToken2(to, remainder, txQueue, options);
+                    txQueue = await this.sendToken2(to, remainder, txQueue, category, options);
                 } else if (remainder < 0) {
                     let amount1 = fromUtxo.balance + remainder;
                     let amount2 = fromUtxo.balance - amount1;
@@ -1119,9 +1129,9 @@ class Client {
      * @param {string} amount - the amount to send, in wei.
      * @param {Object} options - including from: the sender's address.
      */
-    async sendToken(to, amount, options={}) {
+    async sendToken(to, amount, category, options) {
+        [category, options] = this.initCategoryParams(category, options);
         if (amount <= 0) return Promise.reject('The amount to send must be > 0')
-        let category = options.category?options.category.replace('0x','') : '0x0';
         let from = options.from || this.defaultAccount;
         if (this.debug) console.log('Send '+category+' from: '+from+' to: '+to+', amount: '+amount);
         const balance = await this.getTokenBalance(from, category);
@@ -1132,7 +1142,7 @@ class Client {
         // let txPromise = Promise.reject('No eth sent');
 
         let txQueue = [];
-        txQueue = this.sendToken2(to, amount, txQueue, options)
+        txQueue = this.sendToken2(to, amount, txQueue, category, options)
 
         return txQueue;
     };

@@ -32,9 +32,11 @@ export const receiverAddress = process.env.ENV == "LOCAL"? "0x4B3eC6c9dC67079E82
 
 export const erc20ContractAddress = process.env.ENV == "LOCAL"? "0x395B650707cAA0d300615bBa2901398DFf64CF7c": "0x395B650707cAA0d300615bBa2901398DFf64CF7c";
 export const erc721ContractAddress = process.env.ENV == "LOCAL"? "0xd641205E8F36A858c5867945782C917E3F63d1e8": "0x952CE607bD9ab82e920510b2375cbaD234d28c8F";
+export const erc20ContractAddress2 = "0x15AB8DFbb99D72423eb618591836689a5E87dC7a";
 
 export const erc20Contract = new fastx.web3.eth.Contract(erc20Abi, erc20ContractAddress);
 export const erc721Contract = new fastx.web3.eth.Contract(erc721Abi, erc721ContractAddress);
+export const erc20Contract2 = new fastx.web3.eth.Contract(erc20Abi, erc20ContractAddress2);
 
 export const addressFromKey = fastx.web3.eth.accounts.privateKeyToAccount(process.env.AUTHORITY_KEY).address;
 if (addressFromKey.toLowerCase() != ownerAddress.toLowerCase()) {

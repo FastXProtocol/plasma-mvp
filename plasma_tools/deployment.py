@@ -35,6 +35,7 @@ def deploy():
     erc721_contract.mint(plasma_config["COINBASE"], 1, transact={'from': plasma_config["COINBASE"]})
     erc721_contract.mint(plasma_config["COINBASE"], 888, transact={'from': plasma_config["COINBASE"]})
     print("erc721 initialized")
+    erc20_contract_2 = deployer.deploy_contract("EIP20", args=(100000000 * (10 ** 18), "TEST", 18, "TEST"))
     deployer.w3.eth.sendTransaction({'from': plasma_config["COINBASE"], 'to': '0xd03ce696c376882fab5e808aad2ffeae2789a712', 'value': deployer.w3.toWei(50, 'ether')})
     # wallet seed: desert allow payment inmate ribbon still hero claim return wear retreat stuff
     print("test wallet eth sent")
