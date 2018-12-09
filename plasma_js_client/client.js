@@ -840,7 +840,7 @@ class Client {
      * @param {string} [sign1] - input1's signature.
      * @param {string} [address1] - owner of input1.
      */
-    async sendPsTransaction (
+    async makePsTransaction (
             blknum1, txindex1, oindex1,
             newowner1, contractaddress1, amount1, tokenid1,
             contractaddress2, amount2, tokenid2,
@@ -874,9 +874,7 @@ class Client {
             const byteSign1 = new Buffer(sign1, 'hex');
             const byteSign2 = new Buffer("0".repeat(130), 'hex');
             let txRawWithKeys = txRaw.concat([byteSign1, byteSign2]);
-            let txEncoded = rlp.encode(txRawWithKeys);
-            if (this.debug) console.log("sending ps transaction ...");
-            return this.makeChildChainRpcRequest("apply_ps_transaction", [txEncoded.toString('hex')]);
+            return txRawWithKeys;
         }
 
         if (sign1 == null){
@@ -891,10 +889,71 @@ class Client {
         return afterSign1(sign1);
     };
 
+    async sendPsTransaction (
+        blknum1, txindex1, oindex1,
+        newowner1, contractaddress1, amount1, tokenid1,
+        contractaddress2, amount2, tokenid2,
+        fee=0, expiretimestamp=null, salt=null,
+        address1=null, sign1=null
+    ) {
+        const txRawWithKeys = await this.makePsTransaction(
+            blknum1, txindex1, oindex1,
+            newowner1, contractaddress1, amount1, tokenid1,
+            contractaddress2, amount2, tokenid2,
+            fee=0, expiretimestamp=null, salt=null,
+            address1=null, sign1=null);
+        const txEncoded = rlp.encode(txRawWithKeys);
+        if (this.debug) console.log("sending ps transaction ...");
+        return this.makeChildChainRpcRequest("apply_ps_transaction", [txEncoded.toString('hex')]);
+    }
+
+    async makeSwapPsTransaction(offerContractAddress, offerAmount, offerTokenid, receiveContractAddress, receiveAmount, receiveTokenid, options={}){
+        if(offerTokenid != 0){
+            throw new Error('Offer tokenid not supportted');
+        }
+        let address = options.from || this.defaultAccount;
+        const offerUtxo = await this.getOrNewUtxo(offerAmount, offerContractAddress);
+        if (this.debug) console.log("offerUtxo", offerUtxo);
+        const [offerBlknum, offerTxindex, offerOindex, _offerContractAddress, _offerAmount, _offerTokenid] = offerUtxo;
+        const offerPsTx = await this.makePsTransaction(
+            offerBlknum, offerTxindex, offerOindex,
+            address, receiveContractAddress, receiveAmount, receiveTokenid,
+            offerContractAddress, offerAmount, offerTokenid,
+            undefined, undefined, undefined, address
+        );
+        const [blknum1, txindex1, oindex1,
+            blknum2, txindex2, oindex2,
+            newowner1, contractaddress1, amount1, tokenid1,
+            newowner2, contractaddress2, amount2, tokenid2,
+            fee, expiretimestamp, salt,
+            sign1, sign2] = offerPsTx;
+        return {
+            "blknum1": blknum1,
+            "txindex1": txindex1,
+            "oindex1": oindex1,
+            "blknum2": blknum2,
+            "txindex2": txindex2,
+            "oindex2": oindex2,
+            "newowner1": newowner1.toString('hex'),
+            "contractaddress1": contractaddress1.toString('hex'),
+            "amount1": amount1,
+            "tokenid1": tokenid1,
+            "newowner2": newowner2.toString('hex'),
+            "contractaddress2": contractaddress2.toString('hex'),
+            "amount2": amount2,
+            "tokenid2": tokenid2,
+            "fee": fee,
+            "expiretimestamp": expiretimestamp,
+            "salt": salt,
+            "sig1": sign1.toString('hex'),
+            "sig2": sign2.toString('hex'),
+        };
+    }
+
     /**
      * Fill the partially signed transaction.
      * @method
-     * @param {string} psTransaction - the receiver's address.
+     * @param {object} psTransaction
      * @param {number} blknum2 - block number of input 2.
      * @param {number} txindex2 - transaction number in that block for input 2.
      * @param {number} oindex2 - output number of that transaction for input 2.
