@@ -1,10 +1,10 @@
-import {erc20ContractAddress, erc721ContractAddress} from "./config";
+import {ownerAddress, erc20ContractAddress, erc721ContractAddress} from "./config";
 import {approveDeposit} from "./utils";
 
 
 const testApprove = async () => {
-    await approveDeposit(erc20ContractAddress, 100, 0);
-    await approveDeposit(erc721ContractAddress, 0, 888);
+    await approveDeposit(ownerAddress, erc20ContractAddress, 100, 0);
+    await approveDeposit(ownerAddress, erc721ContractAddress, 0, 888);
 }
 
 
