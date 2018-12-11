@@ -5,7 +5,7 @@ import getWeb3 from "./utils/getWeb3";
 import normalizeAddress from "./utils/normalizeAddress";
 import Account from "eth-lib/lib/account";
 import RootChain from "../contract_data/RootChain.abi";
-import Erc20Interface from "../contract_data/ERC20.abi";
+import Erc20Interface from "../contract_data/EIP20.abi";
 import Erc721Interface from "../contract_data/ERC721Basic.abi";
 import Erc721TokenInterface from "../contract_data/ERC721Token.abi";
 
