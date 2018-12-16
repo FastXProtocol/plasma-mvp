@@ -1,16 +1,52 @@
 import fastx, {ownerAddress, receiverAddress, erc20ContractAddress2} from "./config";
 import {sleep} from "./utils";
 
+/*
+    // Get ERC20 Info
+    await fastx.getErc20Info(contractAddress)
 
+    // Get ETH balance in Etherem
+    await fastx.getBalanceEtherem(address)
+
+    // Get ERC20 balance in Etherem
+    await fastx.getBalanceEtherem(address, contractAddress)
+
+    // Approve ERC20
+    await fastx.approve(contractAddress, amount, 0)
+
+    // Deposit ERC20
+    await fastx.deposit(contractAddress, amount, 0)
+
+    // Deposit ETH
+    await fastx.deposit("0x0", amount, 0)
+
+    // Get balance in FastX
+    await fastx.getBalance()
+    
+    // Send ERC20 to receiver
+    await fastx.sendToken(receiverAddress, amount, contractAddress)
+
+    // Send ETH to receiver
+    await fastx.sendToken(receiverAddress, amount, "0x0")
+
+    // Ready for exit
+    const token = await fastx.getOrNewUtxo(amount, contractAddress)
+
+    // Start exit
+    await fastx.startExitUTXO(token)
+
+    // Get exit info
+    await fastx.getExitUTXOInfo(token)
+*/
 const testWallet = async() => {
     // Get ERC20 Info
     console.log("ERC20 Info", await fastx.getErc20Info(erc20ContractAddress2));
 
     // Get ETH balance in Etherem
-    console.log("ETH balance in Etherem", await fastx.web3.eth.getBalance(ownerAddress));
+    console.log("ETH balance in Etherem", await fastx.getBalanceEtherem(ownerAddress));
 
     // Get ERC20 balance in Etherem
-    console.log("ERC20 balance in Etherem", await fastx.getErc20Interface(erc20ContractAddress2).methods.balances(ownerAddress).call());
+    console.log("ERC20 balance in Etherem", await fastx.getBalanceEtherem(ownerAddress, erc20ContractAddress2));
 
     // Approve ERC20
     await fastx.approve(erc20ContractAddress2, 10, 0);
@@ -30,7 +66,7 @@ const testWallet = async() => {
     await fastx.sendToken(receiverAddress, 3, erc20ContractAddress2);
 
     // Send ETH to receiver
-    await fastx.sendToken("0x0", 3, erc20ContractAddress2);
+    await fastx.sendToken(receiverAddress, 3, "0x0");
 
     // Ready for exit
     const token = await fastx.getOrNewUtxo(5, "0x0");

@@ -640,6 +640,15 @@ class Client {
             );
     };
 
+    async getBalanceEtherem(address, contractAddress) {
+        if (!address && this.defaultAccount) address = this.defaultAccount;
+        if (!contractAddress || normalizeAddress(contractAddress).toString('hex') == normalizeAddress("0x0").toString('hex')){
+            return this.web3.eth.getBalance(address);
+        } else {
+            return this.getErc20Interface(contractAddress).methods.balances(address).call();
+        }
+    };
+
     async getBalance (address, block="latest") {
         if (!address && this.defaultAccount) address = this.defaultAccount;
         return await this.getChildChainRpcResponse("get_balance", [address, block]);
