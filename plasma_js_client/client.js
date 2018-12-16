@@ -394,6 +394,20 @@ class Client {
         }
         return [category, options];
     }
+
+    toBigNumber(content){
+        return new web3.utils.BN(content);
+    }
+
+    async getErc20Info(contractAddress) {
+        let erc20Interface = this.getErc20Interface(contractAddress);
+        return {
+            "name": await erc20Interface.methods.name().call(),
+            "symbol": await erc20Interface.methods.symbol().call(),
+            "decimals": this.toBigNumber(await erc20Interface.methods.decimals().call()),
+            "totalSupply": this.toBigNumber(await erc20Interface.methods.totalSupply().call()),
+        }
+    }
     
     /**
      * Deposit assets to the FastX chain.
@@ -429,6 +443,21 @@ class Client {
                     if (this.debug) console.log(hash);
                 }
             );
+    };
+    
+    async getExitUTXOInfo(utxo) {
+        const [blknum, txindex, oindex, contractAddress, amount, tokenid] = utxo;
+        return await this.getExitInfo(blknum, txindex, oindex);
+    }
+
+    async getExitInfo(blknum, txindex, oindex) {
+        const utxoPos = this.getUtxoPos(blknum, txindex, oindex);
+        return await this.rootChainInfo.getExit(utxoPos);
+    }
+
+    async startExitUTXO(utxo, options={}) {
+        const [blknum, txindex, oindex, contractAddress, amount, tokenid] = utxo;
+        await this.startExit(blknum, txindex, oindex, contractAddress, amount, tokenid, options);
     };
 
     async startExit(blknum, txindex, oindex, contractAddress, amount, tokenid, options={}) {
