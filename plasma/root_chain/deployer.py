@@ -4,6 +4,7 @@ from solc import compile_standard
 from web3.contract import ConciseContract, Contract
 from web3 import Web3, HTTPProvider
 from plasma.config import plasma_config
+from plasma.utils.utils import send_transaction_sync
 
 OWN_DIR = os.path.dirname(os.path.realpath(__file__))
 CONTRACTS_DIR = OWN_DIR + '/contracts'
@@ -102,25 +103,13 @@ class Deployer(object):
 
         abi, bytecode = self.get_contract_data(contract_name)
 
-        contract = self.w3.eth.contract(abi=abi, bytecode=bytecode)
-
-        # Get transaction hash from deployed contract
-        tx_hash = contract.deploy(transaction={
-            'from': plasma_config['COINBASE'], #self.w3.eth.accounts[0],
-            'gas': gas
-        }, args=args)
-
-        # Get tx receipt to get contract address
-        tx_receipt = None
-        while not tx_receipt:
-            tx_receipt = self.w3.eth.getTransactionReceipt(tx_hash)
+        contract_ = self.w3.eth.contract(abi=abi, bytecode=bytecode)
+        tx_receipt = send_transaction_sync(self.w3, contract_.constructor())
         contract_address = tx_receipt['contractAddress']
-
-        contract_factory_class = ConciseContract if concise else Contract
-        contract_instance = self.w3.eth.contract(abi, contract_address, ContractFactoryClass=contract_factory_class)
 
         print("Successfully deployed {0} contract: {1}".format(contract_name, contract_address))
 
+        contract_instance = self.w3.eth.contract(abi=abi, address=contract_address)
         return contract_instance
 
     def get_contract_at_address(self, contract_name, address, concise=True):
