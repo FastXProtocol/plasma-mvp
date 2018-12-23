@@ -11,8 +11,9 @@ load_dotenv(dotenv_path=os.path.join(BASE_DIR, "..", ".env"))
 if os.getenv("ENV") == "LOCAL":
     plasma_config = dict(
         DEBUG=True,
-        ROOT_CHAIN_CONTRACT_ADDRESS="0xa3b2a1804203b75b494028966c0f62e677447a39",
+        ROOT_CHAIN_CONTRACT_ADDRESS="0xA3B2a1804203b75b494028966C0f62e677447A39",
         NETWORK="http://localhost:8545",
+        ROOT_CHAIN_LISTENER_INTERVAL=1,
         BLOCK_AUTO_SUMBITTER_INTERVAL=1,
         FINALIZE_EXITS_AUTO_SUBMITTER_INTERVAL=3,
         MAX_SNAPSHOTS=100,
@@ -22,7 +23,9 @@ else:
     plasma_config = dict(
         DEBUG=False,
         ROOT_CHAIN_CONTRACT_ADDRESS="0x15AB8DFbb99D72423eb618591836689a5E87dC7a",
-        NETWORK="https://rinkeby.infura.io/v3/747121a5b89c47318e3f4486eeb62f6a",
+        # NETWORK="https://rinkeby.infura.io/v3/747121a5b89c47318e3f4486eeb62f6a",
+        NETWORK="wss://rinkeby.infura.io/ws/v3/747121a5b89c47318e3f4486eeb62f6a",
+        ROOT_CHAIN_LISTENER_INTERVAL=1,
         BLOCK_AUTO_SUMBITTER_INTERVAL=30,
         FINALIZE_EXITS_AUTO_SUBMITTER_INTERVAL=32,
         MAX_SNAPSHOTS=50,

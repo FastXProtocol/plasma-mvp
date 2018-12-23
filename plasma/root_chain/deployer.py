@@ -2,7 +2,7 @@ import json
 import os
 from solc import compile_standard
 from web3.contract import ConciseContract, Contract
-from web3 import Web3, HTTPProvider
+from web3 import Web3, HTTPProvider, WebsocketProvider
 from plasma.config import plasma_config
 from plasma.utils.utils import send_transaction_sync
 
@@ -13,7 +13,12 @@ OUTPUT_DIR = 'contract_data'
 
 class Deployer(object):
 
-    def __init__(self, provider=HTTPProvider(plasma_config['NETWORK']), CONTRACTS_DIR=CONTRACTS_DIR, OUTPUT_DIR=OUTPUT_DIR):
+    def __init__(self, provider=None, CONTRACTS_DIR=CONTRACTS_DIR, OUTPUT_DIR=OUTPUT_DIR):
+        if provider is None:
+            if plasma_config['NETWORK'].startswith("wss://"):
+                provider = WebsocketProvider(plasma_config['NETWORK'])
+            else:
+                provider = HTTPProvider(plasma_config['NETWORK'])
         self.w3 = Web3(provider)
         self.CONTRACTS_DIR = CONTRACTS_DIR
         self.OUTPUT_DIR = OUTPUT_DIR
@@ -124,7 +129,6 @@ class Deployer(object):
         Returns:
             Contract: A Web3 contract instance.
         """
-
         abi, bytecode = self.get_contract_data(contract_name)
 
         contract_factory_class = ConciseContract if concise else Contract
