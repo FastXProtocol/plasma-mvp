@@ -21,8 +21,8 @@ if os.getenv("ENV") == "LOCAL":
 else:
     plasma_config = dict(
         DEBUG=False,
-        ROOT_CHAIN_CONTRACT_ADDRESS="0xffc5DE2513F5F256dB660CDd566D6C54fBa90405",
-        NETWORK="http://localhost:8545",
+        ROOT_CHAIN_CONTRACT_ADDRESS="0x15AB8DFbb99D72423eb618591836689a5E87dC7a",
+        NETWORK="https://rinkeby.infura.io/v3/747121a5b89c47318e3f4486eeb62f6a",
         BLOCK_AUTO_SUMBITTER_INTERVAL=30,
         FINALIZE_EXITS_AUTO_SUBMITTER_INTERVAL=32,
         MAX_SNAPSHOTS=50,
