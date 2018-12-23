@@ -8,6 +8,7 @@ import rlp
 from ethereum import utils
 
 from plasma.config import plasma_config
+from plasma.utils.utils import send_transaction_sync
 from .block import Block
 from .exceptions import (InvalidBlockMerkleException,
                          InvalidBlockSignatureException,
@@ -139,12 +140,18 @@ class ChildChain(object):
                     if e_utxo_index is not None:
                         block.merklize_transaction_set()
                         proof = block.merkle.create_membership_proof(transaction.merkle_hash)
-                        self.root_chain.transact({'from': '0x' + self.authority.hex()}).challengeExit(
+                        send_transaction_sync(self.root_chain.web3, self.root_chain.functions.challengeExit(
                             block_number * 1000000000 + transaction_index * 10000,
                             e_utxo_index,
                             rlp.encode(transaction, UnsignedTransaction0),
                             proof,
-                            transaction.sig1 + transaction.sig2)
+                            transaction.sig1 + transaction.sig2), options={})
+                        # self.root_chain.transact({'from': '0x' + self.authority.hex()}).challengeExit(
+                        #     block_number * 1000000000 + transaction_index * 10000,
+                        #     e_utxo_index,
+                        #     rlp.encode(transaction, UnsignedTransaction0),
+                        #     proof,
+                        #     transaction.sig1 + transaction.sig2)
                         print("Exiting Challenged Send, UTXOPos: %s" % utxopos)
                         return None
         print("Exiting Challenge Does Not Exists, UTXOPos: %s" % utxopos)
@@ -321,7 +328,8 @@ class ChildChain(object):
             self.partially_signed_transaction_pool.utxo_spent(blknum, txindex, oindex)
 
     def _submit_block(self, block):
-        self.root_chain.transact({'from': '0x' + self.authority.hex()}).submitBlock(block.merkle.root, block.min_expire_timestamp)
+        send_transaction_sync(self.root_chain.web3, self.root_chain.functions.submitBlock(block.merkle.root, block.min_expire_timestamp), options={})
+        # self.root_chain.transact({'from': '0x' + self.authority.hex()}).submitBlock(block.merkle.root, block.min_expire_timestamp)
         # TODO: iterate through block and validate transactions
         self.blocks[self.current_block_number] = self.current_block
         self.current_block_number += self.child_block_interval

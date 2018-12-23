@@ -2,6 +2,8 @@ from time import sleep, time as ttime
 from threading import Thread
 import traceback
 
+from plasma.utils.utils import send_transaction_sync
+
 
 class FinalizeExitsAutoSubmitter(Thread):
     def __init__(self, authority, root_chain, interval, **kwargs):
@@ -16,7 +18,8 @@ class FinalizeExitsAutoSubmitter(Thread):
         except Exception as e:
             return
         if ttime() > exitable_at:
-            self.root_chain.transact({'from': '0x' + self.authority.hex(), "gas": 300000}).finalizeExits()
+            send_transaction_sync(self.root_chain.web3, self.root_chain.functions.finalizeExits(), options={'gas': 300000})
+            # self.root_chain.transact({'from': '0x' + self.authority.hex(), "gas": 300000}).finalizeExits()
             print("finalize exit, triggered by %s %s" % (utxo_pos, exitable_at))
 
     def run(self):
