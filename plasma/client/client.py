@@ -1,18 +1,25 @@
 import rlp
 from ethereum import utils
-from web3 import HTTPProvider
+from web3 import HTTPProvider, WebsocketProvider
 from plasma.child_chain.block import Block
 from plasma.config import plasma_config
 from plasma.root_chain.deployer import Deployer
+from plasma.utils.utils import send_transaction
 from plasma.child_chain.transaction import Transaction, UnsignedTransaction0, UnsignedTransaction1, UnsignedTransaction2
 from .child_chain_service import ChildChainService
 
 
 class Client(object):
 
-    def __init__(self, root_chain_provider=HTTPProvider(plasma_config['NETWORK']), child_chain_url="http://localhost:8546/jsonrpc"):
-        deployer = Deployer(root_chain_provider)
-        self.root_chain = deployer.get_contract_at_address("RootChain", plasma_config['ROOT_CHAIN_CONTRACT_ADDRESS'], concise=True)
+    def __init__(self, root_chain_provider=None, child_chain_url="http://localhost:8546/jsonrpc"):
+        if root_chain_provider is None:
+            if plasma_config['NETWORK'].startswith("wss://"):
+                root_chain_provider = WebsocketProvider(plasma_config['NETWORK'])
+            else:
+                root_chain_provider = HTTPProvider(plasma_config['NETWORK'])
+        self.deployer = Deployer(root_chain_provider)
+        self.w3 = self.deployer.w3
+        self.root_chain = self.deployer.get_contract_at_address("RootChain", plasma_config['ROOT_CHAIN_CONTRACT_ADDRESS'], concise=False)
         self.child_chain = ChildChainService(child_chain_url)
 
     def create_transaction(self, blknum1=0, txindex1=0, oindex1=0,
@@ -32,7 +39,8 @@ class Client(object):
         return transaction
 
     def deposit(self, contractAddress, amount, tokenId, owner):
-        self.root_chain.deposit(contractAddress, amount, tokenId, transact={'from': owner, 'value': amount})
+        send_transaction(self.w3, self.root_chain.functions.deposit(contractAddress, amount, tokenId), options={'from': owner, 'value': amount})
+        # self.root_chain.deposit(contractAddress, amount, tokenId, transact={'from': owner, 'value': amount})
 
     def apply_transaction(self, transaction):
         self.child_chain.apply_transaction(transaction)

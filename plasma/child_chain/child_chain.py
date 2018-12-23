@@ -1,7 +1,8 @@
 import os
 import pickle
-from time import time as ttime
+from time import sleep, time as ttime
 from collections import defaultdict
+from threading import Thread
 
 import rlp
 from ethereum import utils
@@ -16,6 +17,35 @@ from .exceptions import (InvalidBlockMerkleException,
                          BlockExpiredException, )
 from .transaction import Transaction, UnsignedTransaction0
 from .snapshot import make_snapshot
+
+
+class RootChainListener(Thread):
+    def __init__(self, child_chain, root_chain, interval=None, **kwargs):
+        super(RootChainListener, self).__init__(**kwargs)
+        self.child_chain = child_chain
+        self.root_chain = root_chain
+        if interval is None:
+            interval = plasma_config["ROOT_CHAIN_LISTENER_INTERVAL"]
+        self.interval = float(interval)
+        # self.event_filter = self.root_chain.web3.eth.filter({"fromBlock": "latest", "address": plasma_config["ROOT_CHAIN_CONTRACT_ADDRESS"]}) # {'blockHash': HexBytes('0xecfaa038f78cd3d6e67f64d317240da49c84f9c0acc8c61694bba5c83456b215'), 'data': '0x000000000000000000000000fd02ecee62797e75d86bcff1642eb0844afb28c70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002', 'transactionIndex': 11, 'blockNumber': 3562847, 'logIndex': 13, 'address': '0x15AB8DFbb99D72423eb618591836689a5E87dC7a', 'topics': [HexBytes('0x4e2ca0515ed1aef1395f66b5303bb5d6f1bf9d61a353fa53f73f8ac9973fa9f6')], 'transactionHash': HexBytes('0xc549c7b4dac27999a211f2fea4df9842d05f0fba4a7ea63b5779d8a6198c066e'), 'removed': False}
+
+        self.event_filters = []
+        self.event_filters.append(self.root_chain.events.Deposit.createFilter(fromBlock="latest"))
+        self.event_filters.append(self.root_chain.events.ExitStarted.createFilter(fromBlock="latest"))
+        for event_filter in self.event_filters:
+            print(event_filter)
+
+    def run(self):
+        while True:
+            for event_filter in self.event_filters:
+                events = event_filter.get_new_entries()
+                for event in events:
+                    try:
+                        self.child_chain.handle_event(event)
+                    except Exception as e:
+                        print("root chain listener")
+                        traceback.print_exc()
+            sleep(self.interval)
 
 
 class ChildChain(object):
@@ -34,17 +64,18 @@ class ChildChain(object):
             self.load()
 
         # Register for deposit event listener
-        deposit_filter = self.root_chain.on("Deposit")
-        deposit_filter.watch(self.apply_deposit)
-        
-        exit_start_filter = self.root_chain.on("ExitStarted")
-        exit_start_filter.watch(self.apply_exit_start)
-
-        if plasma_config["DEBUG"]:
-            for abi in self.root_chain.abi:
-                if abi.get("type") == "event" and abi["name"] not in ["Deposit", "ExitStarted"]:
-                    self.root_chain.on(abi["name"]).watch(lambda event: print("Root Chain Event: %s" % abi["name"], event))
+        self.root_chain_listener = RootChainListener(self, self.root_chain)
+        self.root_chain_listener.start()
     
+    def handle_event(self, event):
+        # AttributeDict({'blockHash': HexBytes('0x5913f5ad31934d9e3dd6da378f6443598dc0503245401deb1d918d51b4eaf7a7'), 'transactionHash': HexBytes('0x5137d9634681ceb5fad4ad23e32a30d424b3b5a3b080973b994379a18e8e872a'), 'event': 'Deposit', 'blockNumber': 3562832, 'args': AttributeDict({'amount': 100, 'depositBlock': 1, 'tokenId': 0, 'depositor': '0xfd02EcEE62797e75D86BCff1642EB0844afB28c7', 'contractAddress': '0x0000000000000000000000000000000000000000'}), 'logIndex': 5, 'address': '0x15AB8DFbb99D72423eb618591836689a5E87dC7a', 'transactionIndex': 6})
+        if event.event == "Deposit":
+            self.apply_deposit(event)
+        elif event.event == "ExitStarted":
+            self.apply_exit_start(event)
+        else:
+            print("unexpected event", event)
+
     @property
     def save_field_names(self):
         return ["blocks", "current_block_number", "current_block", "pending_transactions"]
