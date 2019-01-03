@@ -38,8 +38,12 @@ class RootChainListener(Thread):
 
     def run(self):
         while True:
-            for event_filter in self.event_filters:
-                events = event_filter.get_new_entries()
+            for event_filter in self.event_filters: 
+                try:
+                    events = event_filter.get_new_entries()
+                except Exception as e:
+                    print(e)
+                    events = []
                 for event in events:
                     try:
                         self.child_chain.handle_event(event)
