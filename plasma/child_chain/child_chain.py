@@ -42,7 +42,7 @@ class RootChainListener(Thread):
                 try:
                     events = event_filter.get_new_entries()
                 except Exception as e:
-                    print(e)
+                    print("get_new_entries:"+e)
                     events = []
                 for event in events:
                     try:

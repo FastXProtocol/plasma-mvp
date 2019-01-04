@@ -3,7 +3,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from ethereum import utils
-
+from eth_utils import to_checksum_address
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(dotenv_path=os.path.join(BASE_DIR, "..", ".env"))
@@ -40,7 +40,7 @@ plasma_config["PSTX_EXPIRE_BUFFER_SECONDS"] = plasma_config["TX_EXPIRE_BUFFER_SE
 
 plasma_config["AUTHORITY_KEY"] = utils.normalize_key(os.getenv("AUTHORITY_KEY"))
 plasma_config["AUTHORITY"] = utils.privtoaddr(plasma_config["AUTHORITY_KEY"])
-plasma_config["COINBASE"] = "0x" + plasma_config["AUTHORITY"].hex()
+plasma_config["COINBASE"] = to_checksum_address(plasma_config["AUTHORITY"])
 
 plasma_config["CHILD_CHAIN_HOST"] = os.getenv("CHILD_CHAIN_HOST") or "0.0.0.0"
 plasma_config["CHILD_CHAIN_PORT"] = os.getenv("CHILD_CHAIN_PORT") or "8546"
