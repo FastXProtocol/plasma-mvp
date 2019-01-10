@@ -40,19 +40,19 @@ class RootChainListener(Thread):
     def get_events(self):
         current_ether_block_number = self.child_chain.current_ether_block_number
         node_ether_block_number = self.root_chain.web3.eth.getBlock('latest')['number']
-        if current_ether_block_number > node_ether_block_number - plasma_config["ROOT_CHAIN_CONFIRM_BLOCKS"]:
+        to_block = node_ether_block_number - plasma_config["ROOT_CHAIN_CONFIRM_BLOCKS"]
+        if current_ether_block_number > to_block:
             sleep(self.interval)
             return []
 
-        print("getting events, block: %s" % current_ether_block_number)
+        print("getting events, from block: %s, to block: %s" % (current_ether_block_number, to_block))
 
         res = []
         for event_func in [self.root_chain.events.Deposit, self.root_chain.events.ExitStarted]:
-            event_filter = event_func.createFilter(fromBlock=current_ether_block_number, toBlock=current_ether_block_number)
+            event_filter = event_func.createFilter(fromBlock=current_ether_block_number, toBlock=to_block)
             res += event_filter.get_all_entries()
 
-        current_ether_block_number += 1
-        self.child_chain.current_ether_block_number = current_ether_block_number
+        self.child_chain.current_ether_block_number = to_block + 1
         self.child_chain.save()
         return res
 
