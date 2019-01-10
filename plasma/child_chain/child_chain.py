@@ -1,5 +1,6 @@
 import os
 import pickle
+import traceback
 from time import sleep, time as ttime
 from collections import defaultdict
 from threading import Thread
@@ -30,27 +31,47 @@ class RootChainListener(Thread):
         self.interval = float(interval)
         # self.event_filter = self.root_chain.web3.eth.filter({"fromBlock": "latest", "address": plasma_config["ROOT_CHAIN_CONTRACT_ADDRESS"]}) # {'blockHash': HexBytes('0xecfaa038f78cd3d6e67f64d317240da49c84f9c0acc8c61694bba5c83456b215'), 'data': '0x000000000000000000000000fd02ecee62797e75d86bcff1642eb0844afb28c70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002', 'transactionIndex': 11, 'blockNumber': 3562847, 'logIndex': 13, 'address': '0x15AB8DFbb99D72423eb618591836689a5E87dC7a', 'topics': [HexBytes('0x4e2ca0515ed1aef1395f66b5303bb5d6f1bf9d61a353fa53f73f8ac9973fa9f6')], 'transactionHash': HexBytes('0xc549c7b4dac27999a211f2fea4df9842d05f0fba4a7ea63b5779d8a6198c066e'), 'removed': False}
 
-        self.event_filters = []
-        self.event_filters.append(self.root_chain.events.Deposit.createFilter(fromBlock="latest"))
-        self.event_filters.append(self.root_chain.events.ExitStarted.createFilter(fromBlock="latest"))
-        for event_filter in self.event_filters:
-            print(event_filter)
+        # self.event_filters = []
+        # self.event_filters.append(self.root_chain.events.Deposit.createFilter(fromBlock="latest"))
+        # self.event_filters.append(self.root_chain.events.ExitStarted.createFilter(fromBlock="latest"))
+        # for event_filter in self.event_filters:
+        #     print(event_filter)
+
+    def get_events(self):
+        current_ether_block_number = self.child_chain.current_ether_block_number
+        node_ether_block_number = self.root_chain.web3.eth.getBlock('latest')['number']
+        if current_ether_block_number > node_ether_block_number - plasma_config["ROOT_CHAIN_CONFIRM_BLOCKS"]:
+            sleep(self.interval)
+            return []
+
+        print("getting events, block: %s" % current_ether_block_number)
+
+        res = []
+        for event_func in [self.root_chain.events.Deposit, self.root_chain.events.ExitStarted]:
+            event_filter = event_func.createFilter(fromBlock=current_ether_block_number, toBlock=current_ether_block_number)
+            res += event_filter.get_all_entries()
+
+        current_ether_block_number += 1
+        self.child_chain.current_ether_block_number = current_ether_block_number
+        self.child_chain.save()
+        return res
 
     def run(self):
         while True:
-            for event_filter in self.event_filters: 
-                try:
-                    events = event_filter.get_new_entries()
-                except Exception as e:
-                    print("get_new_entries:"+e)
-                    events = []
+            try:
+                events = self.get_events()
+            except Exception as e:
+                print("get events error")
+                traceback.print_exc()
+            else:
+            # for event_filter in self.event_filters:
+            #     events = event_filter.get_new_entries()
                 for event in events:
                     try:
                         self.child_chain.handle_event(event)
                     except Exception as e:
-                        print("root chain listener")
+                        print("root chain listener error")
                         traceback.print_exc()
-            sleep(self.interval)
 
 
 class ChildChain(object):
@@ -64,9 +85,13 @@ class ChildChain(object):
         self.current_block_number = self.child_block_interval
         self.current_block = Block()
         self.pending_transactions = []
+        self.current_ether_block_number = None
 
         if load:
             self.load()
+
+        if self.current_ether_block_number is None:
+            self.current_ether_block_number = self.root_chain.web3.eth.getBlock('latest')['number'] - plasma_config["ROOT_CHAIN_CONFIRM_BLOCKS"]
 
         # Register for deposit event listener
         self.root_chain_listener = RootChainListener(self, self.root_chain)
@@ -83,7 +108,7 @@ class ChildChain(object):
 
     @property
     def save_field_names(self):
-        return ["blocks", "current_block_number", "current_block", "pending_transactions"]
+        return ["blocks", "current_block_number", "current_block", "pending_transactions", "current_ether_block_number"]
     
     def save(self):
         # print("skip save")
