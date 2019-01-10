@@ -3,6 +3,7 @@ import os
 from solc import compile_standard
 from web3.contract import ConciseContract, Contract
 from web3 import Web3, HTTPProvider, WebsocketProvider
+from web3.middleware import geth_poa_middleware
 from plasma.config import plasma_config
 from plasma.utils.utils import send_transaction_sync
 
@@ -20,6 +21,8 @@ class Deployer(object):
             else:
                 provider = HTTPProvider(plasma_config['NETWORK'])
         self.w3 = Web3(provider)
+        if "rinkeby" in provider.endpoint_uri:
+            self.w3.middleware_stack.inject(geth_poa_middleware, layer=0)
         self.CONTRACTS_DIR = CONTRACTS_DIR
         self.OUTPUT_DIR = OUTPUT_DIR
 
