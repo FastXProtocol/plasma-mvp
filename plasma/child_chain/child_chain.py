@@ -39,7 +39,7 @@ class RootChainListener(Thread):
 
     def get_events(self):
         current_ether_block_number = self.child_chain.current_ether_block_number
-        node_ether_block_number = self.root_chain.web3.eth.getBlock('latest')['number']
+        node_ether_block_number = self.root_chain.web3.eth.blockNumber
         to_block = node_ether_block_number - plasma_config["ROOT_CHAIN_CONFIRM_BLOCKS"]
         if current_ether_block_number > to_block:
             return []
@@ -91,7 +91,7 @@ class ChildChain(object):
             self.load()
 
         if self.current_ether_block_number is None:
-            self.current_ether_block_number = self.root_chain.web3.eth.getBlock('latest')['number'] - plasma_config["ROOT_CHAIN_CONFIRM_BLOCKS"]
+            self.current_ether_block_number = self.root_chain.web3.eth.blockNumber - plasma_config["ROOT_CHAIN_CONFIRM_BLOCKS"]
 
         # Register for deposit event listener
         self.root_chain_listener = RootChainListener(self, self.root_chain)
