@@ -42,7 +42,6 @@ class RootChainListener(Thread):
         node_ether_block_number = self.root_chain.web3.eth.getBlock('latest')['number']
         to_block = node_ether_block_number - plasma_config["ROOT_CHAIN_CONFIRM_BLOCKS"]
         if current_ether_block_number > to_block:
-            sleep(self.interval)
             return []
 
         print("getting events, from block: %s, to block: %s" % (current_ether_block_number, to_block))
@@ -72,6 +71,7 @@ class RootChainListener(Thread):
                     except Exception as e:
                         print("root chain listener error")
                         traceback.print_exc()
+            sleep(self.interval)
 
 
 class ChildChain(object):
