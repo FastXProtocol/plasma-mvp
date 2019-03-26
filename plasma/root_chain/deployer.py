@@ -112,7 +112,7 @@ class Deployer(object):
         abi, bytecode = self.get_contract_data(contract_name)
 
         contract_ = self.w3.eth.contract(abi=abi, bytecode=bytecode)
-        tx_receipt = send_transaction_sync(self.w3, contract_.constructor())
+        tx_receipt = send_transaction_sync(self.w3, contract_.constructor(*args))
         contract_address = tx_receipt['contractAddress']
 
         print("Successfully deployed {0} contract: {1}".format(contract_name, contract_address))
