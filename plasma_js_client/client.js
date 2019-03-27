@@ -938,8 +938,8 @@ class Client {
             blknum1, txindex1, oindex1,
             newowner1, contractaddress1, amount1, tokenid1,
             contractaddress2, amount2, tokenid2,
-            fee=0, expiretimestamp=null, salt=null,
-            address1=null, sign1=null);
+            fee, expiretimestamp, salt,
+            address1, sign1);
         const txEncoded = rlp.encode(txRawWithKeys);
         if (this.debug) console.log("sending ps transaction ...");
         return this.makeChildChainRpcRequest("apply_ps_transaction", [txEncoded.toString('hex')]);

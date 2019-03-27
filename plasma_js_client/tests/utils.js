@@ -14,8 +14,9 @@ export const logBalance = async (address) => {
 };
 
 export const logBalanceAndUtxo = async (address) => {
+    console.log('logBalanceAndUtxo')
     console.log("\naddress: ", address || fastx.defaultAccount);
-    console.log("ethBalance: ", await fastx.getTokenBalance(address));
+    console.log("ethBalance: ", await fastx.getTokenBalance(address, '0x0'));
     let utxos = (await fastx.getAllUTXO(address)).data.result;
     console.log('\n', utxos);
 }
