@@ -14,9 +14,28 @@ export const root = (typeof self === 'object' && self.self === self && self) ||
   this;
 
 
-function encodeTransaction (txRaw) {
+  function encodeTransaction (txRaw) {
     return rlp.encode(txRaw);
 };
+
+//科学计数法数字转字符串表示
+Number.prototype.noExponents= function(){
+    var data= String(this).split(/[eE]/);
+    if(data.length== 1) return data[0]; 
+
+    var  z= '', sign= this<0? '-':'',
+    str= data[0].replace('.', ''),
+    mag= Number(data[1])+ 1;
+
+    if(mag<0){
+        z= sign + '0.';
+        while(mag++) z += '0';
+        return z + str.replace(/^\-/,'');
+    }
+    mag -= str.length;  
+    while(mag--) z += '0';
+    return str + z;
+}
 
 function range (start, stop, step){
     if (typeof(stop) == 'undefined')
@@ -246,6 +265,7 @@ class Client {
         const rootChain = new this.web3.eth.Contract(RootChain, this.rootChainAddress);
         this.rootChain = rootChain;
         this.rootChainInfo = new RootChainInfo({rootChain});
+        this.BN = this.web3.utils.BN;
     }
 
     setProvider (provider) {
@@ -695,6 +715,8 @@ class Client {
 
         let utxos = (await this.getAllUTXO(from)).data.result;
         let utxo, utxoObj={};
+        console.log('searchUTXO')
+        console.log({utxos})
         for(let i in utxos){
             utxo = utxos[utxos.length - i - 1];
             const [_blknum, _txindex, _oindex, _contract, _balance, _tokenid] = utxo;
@@ -756,6 +778,7 @@ class Client {
         await this.sendToken(from, amount, category, options);
 
         // Get the newly created utxo.
+        console.log('getOrNewUtxo: ',{category: category, tokenId: 0, amount: amount})
         utxo = await this.searchUTXO({category: category, tokenId: 0, amount: amount}, options);
 
         return utxo;
@@ -806,6 +829,9 @@ class Client {
                 throw new Error("sign2 and address2 can not both be none");
             }
         }
+
+        amount1 = new this.BN(amount1+'')
+        amount2 = new this.BN(amount2+'')
         if (expiretimestamp == null){
             expiretimestamp = Math.ceil(Date.now() / 1000) + 3600;
         }
@@ -890,6 +916,10 @@ class Client {
                 throw new Error("sign1 and address1 can not both be none");
             }
         }
+
+        amount1 = new this.BN(amount1+'')
+        amount2 = new this.BN(amount2+'')
+
         if (expiretimestamp == null){
             expiretimestamp = Math.ceil(Date.now() / 1000) + 3600;
         }
@@ -1025,7 +1055,14 @@ class Client {
         const salt = psTransaction.salt;
 
         const sign1 = "0x" + psTransaction.sig1;
-
+        console.log('sendPsTransactionFill')
+        console.log({
+            blknum1, txindex1, oindex1,
+           blknum2, txindex2, oindex2,
+           newowner1, contractaddress1, amount1, tokenid1,
+           newowner2, contractaddress2, amount2, tokenid2,
+           fee, expiretimestamp, salt, address2, sign1, sign2
+        })
         return this.sendTransaction(blknum1, txindex1, oindex1,
            blknum2, txindex2, oindex2,
            newowner1, contractaddress1, amount1, tokenid1,
@@ -1106,35 +1143,43 @@ class Client {
     }
 
     async sendToken2(to, amount, txQueue, category, options) {
+        const BN = this.BN;
         [category, options] = this.initCategoryParams(category, options);
         let fromAddress = options.from || this.defaultAccount;
         let fromUtxo=null, toUtxo=null, utxo=null, remainder=0;
-
+        console.log('sendToken2')
+        console.log(amount, category, fromAddress)
         fromUtxo = await this.searchUtxo(amount, category, {from: fromAddress});
-
+        console.log('fromAddress == to',fromAddress == to)
         if (fromAddress == to) {
             console.log('Merge UTXO');
             if ( fromUtxo.exists() ) {
+                console.log('exists')
                 // don't need to anything
             } else {
+                console.log('txQueue.length',txQueue.length)
+                console.log({txQueue})
                 if ( txQueue.length > 0) {
                     fromUtxo = txQueue.pop();
                 } else {
                     fromUtxo = await this.getNextUtxo(txQueue, category, {from:fromAddress});
                 }
                 console.log('\nfromUtxo: ', fromUtxo);
-                remainder = amount - fromUtxo.balance;
-                console.log('\nRemainder: ', remainder);
-
-                if (remainder < 0) {
-                    let amount1 = fromUtxo.balance + remainder;
-                    let amount2 = fromUtxo.balance - amount1;
-                    toUtxo = new UTXO(0,0,0,fromUtxo.contract,amount2,fromUtxo.tokenId,to);
+                remainder = new BN(parseFloat(amount).noExponents()).sub(new BN(parseFloat(fromUtxo.balance).noExponents()));
+                console.log('\nRemainder: ', remainder.toString());
+                console.log('fromUtxo.balance',fromUtxo.balance,parseFloat(fromUtxo.balance).noExponents())
+                if (remainder.lt('0')) {
+                    // let amount1 = fromUtxo.balance + remainder;
+                    // let amount2 = fromUtxo.balance - amount1;
+                    let amount1 = new BN(parseFloat(fromUtxo.balance).noExponents()).add(remainder);
+                    let amount2 = new BN(parseFloat(fromUtxo.balance).noExponents()).sub(amount1);
+                    
+                    toUtxo = new UTXO(0,0,0,fromUtxo.contract,amount2.toString(),fromUtxo.tokenId,to);
                     console.log({toUtxo});
-                    fromUtxo.balance = amount1;
+                    fromUtxo.balance = amount1.toString();
                     let tx = await this._splitUtxo(fromUtxo, toUtxo);
                     // console.log(utxo);
-                } else if ( remainder > 0 ) {
+                } else if ( remainder.gt('0') ) {
                     //
                     // MERGE UTXOs
                     //
@@ -1145,6 +1190,11 @@ class Client {
 
                     toUtxo = await this.searchUtxo(remainder, category, {from: fromAddress});
                     if ( toUtxo.exists() && ! toUtxo.isEqual(fromUtxo) ) {
+                        console.log('toUtxo.exists',toUtxo.exists() && ! toUtxo.isEqual(fromUtxo))
+                        console.log({
+                            fromUtxo,
+                            toUtxo
+                        })
                         // make sure fromUtxo != toUtxo
                         txQueue.pop();
                         let tx = await this._mergeUtxo(fromUtxo, toUtxo);
@@ -1154,26 +1204,31 @@ class Client {
                         console.log('\ntoUtxo: ', toUtxo);
 
                         // txQueue = txQueue.push(toUtxo);
-                        remainder = remainder - toUtxo.balance;
+                        remainder = remainder.sub(new BN(parseFloat(toUtxo.balance).noExponents()));
                         console.log('\nRemainder: ', remainder);
 
-                        if (remainder > 0) {
+                        if (remainder.gt('0')) {
                             // more utxo needs to be merged.
                             // send the transaction here
+                            console.log({
+                                fromUtxo,
+                                toUtxo
+                            })
                             let tx = await this._mergeUtxo(fromUtxo, toUtxo);
                             // get the created utxo
                             let utxo = await this.searchUtxo(
                                 fromUtxo.balance + toUtxo.balance, category, {from: toUtxo.owner});
                             txQueue.pop();
                             txQueue.push(utxo);
+                            console.log({utxo})
                             // then keep working on merging
                             txQueue = await this.sendToken2(to, amount, txQueue, category, options);
-                        } else if (remainder < 0) {
-                            let amount1 = toUtxo.balance + remainder;
-                            let amount2 = toUtxo.balance - amount1;
-                            let splitUtxo = new UTXO(0,0,0,toUtxo.contract,amount2,toUtxo.tokenId,toUtxo.owner);
-                            toUtxo.balance = amount1;
-                            console.log('Spliting utxo amount1: '+amount1+', amount2: '+amount2);
+                        } else if (remainder.lt('0')) {
+                            let amount1 = new BN(parseFloat(toUtxo.balance).noExponents()).add(remainder);
+                            let amount2 = new BN(parseFloat(toUtxo.balance).noExponents()).sub(amount1);
+                            let splitUtxo = new UTXO(0,0,0,toUtxo.contract,amount2.toString(),toUtxo.tokenId,toUtxo.owner);
+                            toUtxo.balance = amount1.toString();
+                            console.log('Spliting utxo amount1: '+amount1.toString()+', amount2: '+amount2.toString());
                             // txQueue = txQueue.push(fromUtxo);
                             let tx = await this._splitUtxo(toUtxo, splitUtxo);
                             // console.log(utxo);
@@ -1194,9 +1249,9 @@ class Client {
             } else {
                 fromUtxo = await this.getNextUtxo(txQueue, category, {from:fromAddress});
                 console.log('\nfromUtxo: ', fromUtxo);
-                remainder = amount - fromUtxo.balance;
-                console.log('\nRemainder: ', remainder);
-                if ( remainder > 0 ) {
+                remainder = new BN(parseFloat(amount).noExponents()).sub(new BN(parseFloat(fromUtxo.balance).noExponents()));
+                console.log('\nRemainder: ', remainder.toString());
+                if ( remainder.gt('0') ) {
                     toUtxo = new UTXO(0,0,0,fromUtxo.contract,0,fromUtxo.tokenId,to);
                     let tx = await this._splitUtxo(fromUtxo, toUtxo);
                     // console.log(utxo);
@@ -1204,10 +1259,10 @@ class Client {
                     // console.log('\nTxQueue ', txQueue);
                     txQueue = await this.sendToken2(to, remainder, txQueue, category, options);
                 } else if (remainder < 0) {
-                    let amount1 = fromUtxo.balance + remainder;
-                    let amount2 = fromUtxo.balance - amount1;
-                    toUtxo = new UTXO(0,0,0,fromUtxo.contract,amount2,fromUtxo.tokenId,to);
-                    fromUtxo.balance = amount1;
+                    let amount1 = new BN(parseFloat(fromUtxo.balance).noExponents()).add(remainder);
+                    let amount2 = new BN(parseFloat(fromUtxo.balance).noExponents()).sub(amount1);
+                    toUtxo = new UTXO(0,0,0,fromUtxo.contract,amount2.toString(),fromUtxo.tokenId,to);
+                    fromUtxo.balance = amount1.toString();
                     let tx = await this._splitUtxo(fromUtxo, toUtxo);
                     // console.log(utxo);
                 } else {
