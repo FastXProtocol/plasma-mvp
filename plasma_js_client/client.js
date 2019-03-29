@@ -1,6 +1,6 @@
 import axios from 'axios';
 import rlp from 'rlp';
-
+import jsonlint from './jsonlint'
 import getWeb3 from "./utils/getWeb3";
 import normalizeAddress from "./utils/normalizeAddress";
 import Account from "eth-lib/lib/account";
@@ -14,16 +14,15 @@ export const root = (typeof self === 'object' && self.self === self && self) ||
   this;
 
 
-  function encodeTransaction (txRaw) {
+function encodeTransaction (txRaw) {
     return rlp.encode(txRaw);
 };
 
-//科学计数法数字转字符串表示
-Number.prototype.noExponents= function(){
-    var data= String(this).split(/[eE]/);
+const noExponents= function(num){
+    var data= String(num).split(/[eE]/);
     if(data.length== 1) return data[0]; 
 
-    var  z= '', sign= this<0? '-':'',
+    var  z= '', sign= num<0? '-':'',
     str= data[0].replace('.', ''),
     mag= Number(data[1])+ 1;
 
@@ -344,6 +343,12 @@ class Client {
     }
 
     makeChildChainRpcRequest (method, params) {
+        axios.defaults.transformResponse = [
+            function(data) {
+              return jsonlint.parse(data)
+            }
+        ]
+
         return axios.post(this.fastXRpc, {
             "method": method,
             "params": params,
@@ -1004,11 +1009,11 @@ class Client {
             "oindex2": oindex2,
             "newowner1": newowner1.toString('hex'),
             "contractaddress1": contractaddress1.toString('hex'),
-            "amount1": amount1,
+            "amount1": amount1.toString(),
             "tokenid1": tokenid1,
             "newowner2": newowner2.toString('hex'),
             "contractaddress2": contractaddress2.toString('hex'),
-            "amount2": amount2,
+            "amount2": amount2.toString(),
             "tokenid2": tokenid2,
             "fee": fee,
             "expiretimestamp": expiretimestamp,
@@ -1055,14 +1060,7 @@ class Client {
         const salt = psTransaction.salt;
 
         const sign1 = "0x" + psTransaction.sig1;
-        console.log('sendPsTransactionFill')
-        console.log({
-            blknum1, txindex1, oindex1,
-           blknum2, txindex2, oindex2,
-           newowner1, contractaddress1, amount1, tokenid1,
-           newowner2, contractaddress2, amount2, tokenid2,
-           fee, expiretimestamp, salt, address2, sign1, sign2
-        })
+
         return this.sendTransaction(blknum1, txindex1, oindex1,
            blknum2, txindex2, oindex2,
            newowner1, contractaddress1, amount1, tokenid1,
@@ -1165,14 +1163,14 @@ class Client {
                     fromUtxo = await this.getNextUtxo(txQueue, category, {from:fromAddress});
                 }
                 console.log('\nfromUtxo: ', fromUtxo);
-                remainder = new BN(parseFloat(amount).noExponents()).sub(new BN(parseFloat(fromUtxo.balance).noExponents()));
+                remainder = new BN(noExponents(amount)).sub(new BN(noExponents(fromUtxo.balance)));
                 console.log('\nRemainder: ', remainder.toString());
-                console.log('fromUtxo.balance',fromUtxo.balance,parseFloat(fromUtxo.balance).noExponents())
+                console.log('fromUtxo.balance',fromUtxo.balance,noExponents(fromUtxo.balance))
                 if (remainder.lt('0')) {
                     // let amount1 = fromUtxo.balance + remainder;
                     // let amount2 = fromUtxo.balance - amount1;
-                    let amount1 = new BN(parseFloat(fromUtxo.balance).noExponents()).add(remainder);
-                    let amount2 = new BN(parseFloat(fromUtxo.balance).noExponents()).sub(amount1);
+                    let amount1 = new BN(noExponents(fromUtxo.balance)).add(remainder);
+                    let amount2 = new BN(noExponents(fromUtxo.balance)).sub(amount1);
                     
                     toUtxo = new UTXO(0,0,0,fromUtxo.contract,amount2.toString(),fromUtxo.tokenId,to);
                     console.log({toUtxo});
@@ -1204,7 +1202,7 @@ class Client {
                         console.log('\ntoUtxo: ', toUtxo);
 
                         // txQueue = txQueue.push(toUtxo);
-                        remainder = remainder.sub(new BN(parseFloat(toUtxo.balance).noExponents()));
+                        remainder = remainder.sub(new BN(noExponents(toUtxo.balance)));
                         console.log('\nRemainder: ', remainder);
 
                         if (remainder.gt('0')) {
@@ -1224,8 +1222,8 @@ class Client {
                             // then keep working on merging
                             txQueue = await this.sendToken2(to, amount, txQueue, category, options);
                         } else if (remainder.lt('0')) {
-                            let amount1 = new BN(parseFloat(toUtxo.balance).noExponents()).add(remainder);
-                            let amount2 = new BN(parseFloat(toUtxo.balance).noExponents()).sub(amount1);
+                            let amount1 = new BN(noExponents(toUtxo.balance)).add(remainder);
+                            let amount2 = new BN(noExponents(toUtxo.balance)).sub(amount1);
                             let splitUtxo = new UTXO(0,0,0,toUtxo.contract,amount2.toString(),toUtxo.tokenId,toUtxo.owner);
                             toUtxo.balance = amount1.toString();
                             console.log('Spliting utxo amount1: '+amount1.toString()+', amount2: '+amount2.toString());
@@ -1249,7 +1247,7 @@ class Client {
             } else {
                 fromUtxo = await this.getNextUtxo(txQueue, category, {from:fromAddress});
                 console.log('\nfromUtxo: ', fromUtxo);
-                remainder = new BN(parseFloat(amount).noExponents()).sub(new BN(parseFloat(fromUtxo.balance).noExponents()));
+                remainder = new BN(noExponents(amount)).sub(new BN(noExponents(fromUtxo.balance)));
                 console.log('\nRemainder: ', remainder.toString());
                 if ( remainder.gt('0') ) {
                     toUtxo = new UTXO(0,0,0,fromUtxo.contract,0,fromUtxo.tokenId,to);
@@ -1259,8 +1257,8 @@ class Client {
                     // console.log('\nTxQueue ', txQueue);
                     txQueue = await this.sendToken2(to, remainder, txQueue, category, options);
                 } else if (remainder < 0) {
-                    let amount1 = new BN(parseFloat(fromUtxo.balance).noExponents()).add(remainder);
-                    let amount2 = new BN(parseFloat(fromUtxo.balance).noExponents()).sub(amount1);
+                    let amount1 = new BN(noExponents(fromUtxo.balance)).add(remainder);
+                    let amount2 = new BN(noExponents(fromUtxo.balance)).sub(amount1);
                     toUtxo = new UTXO(0,0,0,fromUtxo.contract,amount2.toString(),fromUtxo.tokenId,to);
                     fromUtxo.balance = amount1.toString();
                     let tx = await this._splitUtxo(fromUtxo, toUtxo);
