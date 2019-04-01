@@ -837,6 +837,7 @@ class Client {
 
         amount1 = new this.BN(amount1+'')
         amount2 = new this.BN(amount2+'')
+
         if (expiretimestamp == null){
             expiretimestamp = Math.ceil(Date.now() / 1000) + 3600;
         }
@@ -921,9 +922,6 @@ class Client {
                 throw new Error("sign1 and address1 can not both be none");
             }
         }
-
-        amount1 = new this.BN(amount1+'')
-        amount2 = new this.BN(amount2+'')
 
         if (expiretimestamp == null){
             expiretimestamp = Math.ceil(Date.now() / 1000) + 3600;
