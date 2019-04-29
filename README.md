@@ -87,6 +87,14 @@ It's also recommended to run [`ganache-cli`](https://github.com/trufflesuite/gan
 
 Use [Miniconda](https://conda.io/miniconda.html) to create an isolated Python environment:
 
+Install miniconda:
+
+    $ wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    $ chmod +x ./Miniconda3-latest-Linux-x86_64.sh
+    $ ./Miniconda3-latest-Linux-x86_64.sh
+    
+Then create the env for the project:
+
     $ conda create -n plasma-mvp python=3
     $ source activate plasma-mvp
 
